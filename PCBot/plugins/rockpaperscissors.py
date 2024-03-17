@@ -3,14 +3,14 @@ import hikari
 import miru
 from crescent.ext import docstrings
 from enum import Enum
-from PCBot.botdata import botdata
+from PCBot.botdata import BotData
 from typing import Optional
 
 # Load guild id
 with open('./secrets/guild') as f:
   guildId = int(f.read().strip())
 
-plugin = crescent.Plugin[hikari.GatewayBot, botdata]()
+plugin = crescent.Plugin[hikari.GatewayBot, BotData]()
 
 # Not useful for this as command options can be seen by users.
 # Keeping as autocomplete may be useful for something else.
@@ -53,9 +53,9 @@ plugin = crescent.Plugin[hikari.GatewayBot, botdata]()
 #
 # Above is sent with:
 # modal = RPSModal()
-# builder = modal.build_response(ctx.client.model.miru)
+# builder = modal.build_response(plugin.model.miru)
 # await ctx.respond_with_builder(builder)
-# ctx.client.model.miru.start_modal(modal)
+# plugin.model.miru.start_modal(modal)
 
 class RPSPick(Enum):
   Rock     = 1
@@ -66,6 +66,7 @@ class RPSPick(Enum):
 # TODO: Tell user when their pick has been received
 # TODO: Report timeout
 # TODO: Disable buttons visibly after the round is over or timeout has occurred
+# TODO: Convert to user command or at least offer that option
 
 class RPSView(miru.View):
   challenger: hikari.User
@@ -144,4 +145,4 @@ class rpschallenge:
        'Both players now need to make their decision below:',
       components = view
     )
-    ctx.client.model.miru.start_view(view)
+    plugin.model.miru.start_view(view)
