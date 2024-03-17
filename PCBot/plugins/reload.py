@@ -6,10 +6,13 @@ import logging
 from crescent.ext import docstrings
 from PCBot.botdata import BotData
 
+# TODO: Reload botdata.py, only if can be done without losing data
 # TODO: Fix newly loaded plugins not showing up in discord
 # TODO: Restrict command to committee members
 # TODO: Indicate which commands are from each plugin
-# TODO: Indicate which plugins/commands are new, modified, unmodified or malformed
+# TODO: Indicate which plugins/commands are modified, modified or malformed
+# TODO: Specifically list which exceptions are possible during module loading
+# TODO: Change client status during reload?
 
 # Load guild id
 with open('./secrets/guild') as f:
@@ -17,6 +20,7 @@ with open('./secrets/guild') as f:
 
 logger = logging.getLogger(__name__)
 plugin = crescent.Plugin[hikari.GatewayBot, BotData]()
+plugin_folder = 'PCBot.plugins'
 
 
 @plugin.include
@@ -47,14 +51,15 @@ class ReloadCommand:
         # Load unloaded plugins, if any plugin it finds was previously loaded
         # then the old code is reused
         try:
-            plugins.load_folder('PCBot.plugins')
+            plugins.load_folder(plugin_folder)
             # Reload previously loaded plugins to use newest code
-            loaded_plugins = plugins.load_folder('PCBot.plugins', refresh=True)
+            loaded_plugins = plugins.load_folder(plugin_folder, refresh=True)
             safe_mode = False
         except:
-            plugins.unload('PCBot.plugins.reload')
-            plugins.load('PCBot.plugins.reload')
-            loaded_plugins = [plugins.load('PCBot.plugins.reload', refresh=True)]
+            # Used to prevent load erroring, not sure why unload_all fails here
+            plugins.unload(__name__)
+            plugins.load(__name__)
+            loaded_plugins = [plugins.load(__name__, refresh=True)]
             safe_mode = True
 
         if safe_mode:
@@ -64,8 +69,16 @@ class ReloadCommand:
             logger.info('Reloaded')
             await ctx.edit('Reloaded')
 
+        old_plugins = plugin.model.plugin_names
         plugin.model.update_plugins(loaded_plugins)
-        plugin_list = ', '.join(plugin.model.plugin_names)
-        logger.info(f'Loaded plugins: {plugin_list}')
+        loaded_list = ', '.join(plugin.model.plugin_names)
+        missing_list = ', '.join(old_plugins - plugin.model.plugin_names)
+        new_list = ', '.join(plugin.model.plugin_names - old_plugins)
+
+        logger.info(f'Loaded modules: {loaded_list}')
+        if missing_list != '':
+            logger.warning(f'Missing modules: {missing_list}')
+        if new_list != '':
+            logger.info(f'New modules: {new_list}')
         if self.list_plugins:
-            await ctx.respond(f'Loaded plugins: {plugin_list}')
+            await ctx.respond(f'Loaded plugins: {loaded_list}')

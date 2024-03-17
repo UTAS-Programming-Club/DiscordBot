@@ -5,7 +5,9 @@ import hikari
 import miru
 from PCBot.botdata import BotData
 
-# TODO: Decide if loading in safe mode is allowed, if so reuse code from reload.py
+# TODO: Decide if loading in safe mode is allowed, reuse code from reload.py
+# TODO: Report loaded commands/modules to the console.
+#       Command level accuracy may need reveal_type?
 
 # Load bot token
 with open('./secrets/token') as f:
