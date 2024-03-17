@@ -5,6 +5,8 @@ import hikari
 import miru
 from PCBot.botdata import BotData
 
+# TODO: Decide if loading in safe mode is allowed, if so reuse code from reload.py
+
 # Load bot token
 with open('./secrets/token') as f:
     token = f.read().strip()

@@ -5,6 +5,7 @@ import dataclasses
 import miru
 import sys
 
+# TODO: Replace modules/getattr with typing.reveal_type usage in plugins
 
 @dataclasses.dataclass
 class BotData:
@@ -19,7 +20,7 @@ class BotData:
         for module_name, module in sys.modules.items():
             if 'PCBot.plugins.' not in module_name:
                 continue
-            new_plugin = getattr(module, "plugin", None)
+            new_plugin = getattr(module, 'plugin', None)
             if new_plugin not in loaded_plugins:
                 continue
             module_file_name = module_name.split('.')[-1]
