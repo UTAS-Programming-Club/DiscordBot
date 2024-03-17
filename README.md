@@ -18,9 +18,11 @@ python -OO -m PCBot
 
 # Desired Features
 ## PC club members are welcome to contribute
-Type checking
-Restricting reload command to committee members
-More commands
+There is a section in each docstring for credits
+* Type checking
+* Restricting reload command to committee members
+* More commands
+* Anything listed as TODO within the plugins
 
 
 Based on https://github.com/hypergonial/hikari-intro/
