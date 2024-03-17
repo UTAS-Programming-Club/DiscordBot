@@ -1,3 +1,5 @@
+"""This module contains the bot's plugin reloading command."""
+
 import crescent
 import hikari
 import logging
