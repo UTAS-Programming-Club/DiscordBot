@@ -17,8 +17,7 @@ python -OO -m PCBot
 ```
 
 # Desired Features
-## PC club members are welcome to contribute
-There is a section in each docstring for credits
+PC club members are welcome to contribute and there is a section in each docstring for credits
 * Type checking
 * Restricting reload command to committee members
 * More commands
