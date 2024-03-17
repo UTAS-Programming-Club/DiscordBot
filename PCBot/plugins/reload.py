@@ -23,7 +23,7 @@ async def reload(ctx: crescent.Context) -> None:
   """
   await ctx.respond('Reloading...', ephemeral = True)
   plugins = plugin.client.plugins
-  # TODO: Fix this causing errors or not actually loading to plugin changes
+  # TODO: Fix this causing errors or not actually loading any plugin changes
   # The current issue is that this copy of load_folder will error if an unloaded
   # plugin is detected either because it is new or it errored on a previous load
   #plugins.unload_all()

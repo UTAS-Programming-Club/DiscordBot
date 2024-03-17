@@ -25,7 +25,7 @@ plugin = crescent.Plugin[hikari.GatewayBot, botdata]()
 #    _options = await ctx.fetch_options()
 #    return []
 
-# Not useful returning False modal_check still closes the Modal.
+# Not useful as returning False from modal_check still closes the Modal.
 # I was hoping that it would show an error and allow changing input.
 # Keeping as it may be useful for something else.
 #class RPSModal(miru.Modal, title = 'Rock Paper Scissors'):
