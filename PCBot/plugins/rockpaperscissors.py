@@ -8,6 +8,13 @@ from enum import Enum
 from PCBot.botdata import BotData
 from typing import Optional
 
+# TODO: Add a variant for more than 2 people
+# TODO: Prevent users changing their pick
+# TODO: Tell user when their pick has been received
+# TODO: Report timeout
+# TODO: Disable buttons visibly after the round is over or timeout has occurred
+# TODO: Convert to user command or at least offer that option
+
 # Load guild id
 with open('./secrets/guild') as f:
     guild_id = int(f.read().strip())
@@ -62,13 +69,6 @@ plugin = crescent.Plugin[hikari.GatewayBot, BotData]()
 # builder = modal.build_response(plugin.model.miru)
 # await ctx.respond_with_builder(builder)
 # plugin.model.miru.start_modal(modal)
-
-# TODO: Add a variant for more than 2 people
-# TODO: Prevent users changing their pick
-# TODO: Tell user when their pick has been received
-# TODO: Report timeout
-# TODO: Disable buttons visibly after the round is over or timeout has occurred
-# TODO: Convert to user command or at least offer that option
 
 
 class RPSPick(Enum):
