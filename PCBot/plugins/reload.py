@@ -5,7 +5,7 @@ import hikari
 import logging
 import os
 from crescent.ext import docstrings
-from PCBot.botdata import BotData
+from PCBot.botdata import BotData, guild_id_path, get_token_file_path
 from PCBot.pluginmanager import (
     get_plugin_names, reload_plugin_manager, reload_plugins
 )
@@ -22,7 +22,7 @@ from typing import Optional
 # TODO: Detect all plugin errors during reload
 
 # Load guild id
-with open('./secrets/guild') as f:
+with open(get_token_file_path(guild_id_path)) as f:
     guild_id = int(f.read().strip())
 
 logger = logging.getLogger(__name__)

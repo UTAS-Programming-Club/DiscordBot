@@ -5,7 +5,7 @@ import hikari
 import miru
 from crescent.ext import docstrings
 from enum import Enum
-from PCBot.botdata import BotData
+from PCBot.botdata import BotData, guild_id_path, get_token_file_path
 from typing import Optional
 
 # TODO: Add a variant for more than 2 people
@@ -16,7 +16,7 @@ from typing import Optional
 # TODO: Convert to user command or at least offer that option
 
 # Load guild id
-with open('./secrets/guild') as f:
+with open(get_token_file_path(guild_id_path)) as f:
     guild_id = int(f.read().strip())
 
 plugin = crescent.Plugin[hikari.GatewayBot, BotData]()
@@ -167,7 +167,8 @@ class RPSChallengeCommand:
     Challenge a user to rock paper scissors.
 
     Requested by iluka wighton(razer304).
-    Implemented by something sensible(somethingsensible).
+    Implemented by something sensible(somethingsensible) &
+                   Camtas(camtas).
 
     Args:
         user: User to challenge.
