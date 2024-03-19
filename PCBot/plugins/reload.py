@@ -17,8 +17,9 @@ from typing import Optional
 # TODO: Specifically list which exceptions are possible during plugin loading
 # TODO: Change client status during reload?
 # TODO: Name file causing error, log currently says it occurred in this module
-# TODO: Detect all plugin errors during reload
 # TODO: Reenable error reporting, it only catches errors in pluginmanager now
+# TODO: Report loading errors again, pluginmanager ignores them
+# TODO: Prevent unloading reload command if on disk version has an error
 
 logger = logging.getLogger(__name__)
 plugin = crescent.Plugin[hikari.GatewayBot, BotData]()
@@ -45,6 +46,7 @@ class ReloadCommand:
         """Handle reload command being run."""
         safe_mode: bool
         malformed_plugin_path: Optional[str] = None
+        reloaded_text: str
 
         await ctx.respond('Reloading...', ephemeral=True)
 
@@ -77,18 +79,18 @@ class ReloadCommand:
             logger.error(error)
 
         if safe_mode and malformed_plugin_path is not None:
-            logger.warning(
+            reloaded_text = \
               f'Reloaded in safe mode, error in {malformed_plugin_path} plugin'
-            )
-            await ctx.edit(
-              f'Reloaded in safe mode, error in {malformed_plugin_path} plugin'
-            )
+            logger.warning(reloaded_text)
+            await ctx.edit(reloaded_text)
         elif safe_mode:
-            logger.warning('Reloaded in safe mode')
-            await ctx.edit('Reloaded in safe mode')
+            reloaded_text = 'Reloaded in safe mode'
+            logger.warning(reloaded_text)
+            await ctx.edit(reloaded_text)
         else:
-            logger.info('Reloaded')
-            await ctx.edit('Reloaded')
+            reloaded_text = 'Reloaded'
+            logger.info(reloaded_text)
+            await ctx.edit(reloaded_text)
 
         new_plugins = get_plugin_names(plugins)
         loaded_list = ', '.join(new_plugins)
@@ -105,9 +107,9 @@ class ReloadCommand:
 
         # Reregister commands with discord
         if self.reregister:
-            await ctx.edit('Reloaded, Reregistering')
+            await ctx.edit(reloaded_text + ', Reregistering')
 
             await plugin.client.commands.register_commands()
 
             logger.info('Reregistered commands')
-            await ctx.edit('Reloaded and Reregistered')
+            await ctx.edit(reloaded_text + ', Reregistered')
