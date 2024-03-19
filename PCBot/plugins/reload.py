@@ -6,6 +6,7 @@ import logging
 import os
 from crescent.ext import docstrings
 from PCBot.botdata import BotData
+from PCBot.pluginmanager import get_plugin_names
 from typing import Optional
 
 # TODO: Reload botdata.py, only if can be done without losing data
@@ -15,6 +16,8 @@ from typing import Optional
 # TODO: Indicate which plugins/commands are modified, modified or malformed
 # TODO: Specifically list which exceptions are possible during plugin loading
 # TODO: Change client status during reload?
+# TODO: List error during a failed reload
+# TODO: Detect all plugin errors during reload
 
 # Load guild id
 with open('./secrets/guild') as f:
@@ -46,8 +49,9 @@ class ReloadCommand:
 
         await ctx.respond('Reloading...', ephemeral=True)
 
-        # Used to avoid an error with plugin being undefined after unload_all
+        # Used to avoid an error with client being undefined after unload_all
         plugins = plugin.client.plugins
+        old_plugins = get_plugin_names(plugins)
         # Used to avoid the first load_folder erroring because it tried to load
         # an already loaded plugin
         plugins.unload_all()
@@ -92,11 +96,10 @@ class ReloadCommand:
             logger.info('Reloaded')
             await ctx.edit('Reloaded')
 
-        old_plugins = plugin.model.plugin_names
-        plugin.model.update_plugins(loaded_plugins)
-        loaded_list = ', '.join(plugin.model.plugin_names)
-        missing_list = ', '.join(old_plugins - plugin.model.plugin_names)
-        new_list = ', '.join(plugin.model.plugin_names - old_plugins)
+        new_plugins = get_plugin_names(plugins)
+        loaded_list = ', '.join(new_plugins)
+        missing_list = ', '.join(old_plugins - new_plugins)
+        new_list = ', '.join(new_plugins - old_plugins)
 
         logger.info(f'Loaded plugins: {loaded_list}')
         if missing_list != '':
