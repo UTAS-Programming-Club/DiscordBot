@@ -180,7 +180,7 @@ class RPSChallengeCommand:
         view.challenger = ctx.user
         view.challengee = self.user.user
         await ctx.respond(
-          f'{self.user.user.mention}'
+          f'{self.user.user.mention} '
           'You have been challenged to Rock Paper Scissors!\n'
           'Both players now need to make their decision below:',
           components=view
