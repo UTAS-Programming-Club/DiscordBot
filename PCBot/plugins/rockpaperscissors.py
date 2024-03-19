@@ -86,7 +86,7 @@ class RPSView(miru.View):
     challengee: hikari.User
     challenger_pick: Optional[RPSPick] = None
     challengee_pick: Optional[RPSPick] = None
-    
+
     message_emojis = ['\N{ROCK}', '\N{SCROLL}', '\N{BLACK SCISSORS}']
 
     async def determine_winner(self, ctx: miru.ViewContext) -> None:
@@ -106,14 +106,16 @@ class RPSView(miru.View):
            self.challengee_pick is RPSPick.Scissors
         )):
             await ctx.edit_response(
-              f'{self.message_emojis[(self.challenger_pick.value - 1) % 3]} >> {self.message_emojis[(self.challengee_pick.value - 1) % 3]}\n'
+              f'{self.message_emojis[self.challenger_pick.value - 1]} '
+              f'>> {self.message_emojis[self.challengee_pick.value - 1]}\n'
               f'{self.challenger_pick.name} beats '
               f'{self.challengee_pick.name.lower()}, '
               f'{self.challenger.mention} wins!'
             )
         else:
             await ctx.edit_response(
-              f'{self.message_emojis[(self.challengee_pick.value - 1) % 3]} >> {self.message_emojis[(self.challenger_pick.value - 1) % 3]}\n'
+              f'{self.message_emojis[self.challengee_pick.value - 1]} '
+              f'>> {self.message_emojis[self.challenger_pick.value - 1]}\n'
               f'{self.challengee_pick.name} beats '
               f'{self.challenger_pick.name.lower()}, '
               f'{self.challengee.mention} wins!'

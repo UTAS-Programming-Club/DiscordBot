@@ -3,7 +3,6 @@
 import crescent
 import hikari
 import logging
-import os
 from crescent.ext import docstrings
 from PCBot.botdata import BotData, guild_id_path, get_token_file_path
 from PCBot.pluginmanager import (
@@ -12,7 +11,6 @@ from PCBot.pluginmanager import (
 from typing import Optional
 
 # TODO: Reload botdata.py, only if can be done without losing data
-# TODO: Fix newly loaded plugins not showing up in discord
 # TODO: Restrict command to committee members
 # TODO: Indicate which commands are from each plugin
 # TODO: Indicate which plugins/commands are modified, modified or malformed
@@ -20,6 +18,7 @@ from typing import Optional
 # TODO: Change client status during reload?
 # TODO: Name file causing error, log currently says it occurred in this module
 # TODO: Detect all plugin errors during reload
+# TODO: Reenable error reporting, it only catches errors in pluginmanager now
 
 # Load guild id
 with open(get_token_file_path(guild_id_path)) as f:
@@ -43,6 +42,8 @@ class ReloadCommand:
 
     list_plugins = crescent.option(bool, 'Show a list of loaded plugins?',
                                    default=False)
+    reregister = crescent.option(bool, 'Reregister commands with discord.',
+                                 default=True)
 
     async def callback(self, ctx: crescent.Context) -> None:
         """Handle reload command being run."""
@@ -60,19 +61,19 @@ class ReloadCommand:
             safe_mode = False
         except Exception as error:
             # Try to find first exception in erroring plugin
-            tb = error.__traceback__
-            # First error is in this file so not wanted despite passing check
-            if tb is not None:
-                tb = tb.tb_next
-            while tb is not None:
-                plugin_path = tb.tb_frame.f_code.co_filename
-                if 'PCBot' not in plugin_path:
-                    tb = tb.tb_next
-                    continue
-                base_name = os.path.basename(plugin_path)
-                if 'pluginmanager' not in base_name:
-                    malformed_plugin_path = base_name.split('.')[0]
-                break
+            # tb = error.__traceback__
+            #  First error is in this file so not wanted despite passing check
+            # if tb is not None:
+            #     tb = tb.tb_next
+            # while tb is not None:
+            #     plugin_path = tb.tb_frame.f_code.co_filename
+            #     if 'PCBot' not in plugin_path:
+            #         tb = tb.tb_next
+            #         continue
+            #     base_name = os.path.basename(plugin_path)
+            #     if 'pluginmanager' not in base_name:
+            #         malformed_plugin_path = base_name.split('.')[0]
+            #     break
             plugins.unload(__name__)
             plugins.load(__name__)
             plugins.load(__name__, refresh=True)
@@ -105,3 +106,12 @@ class ReloadCommand:
             logger.info(f'New plugins: {new_list}')
         if self.list_plugins:
             await ctx.respond(f'Loaded plugins: {loaded_list}')
+
+        # Reregister commands with discord
+        if self.reregister:
+            await ctx.edit('Reloaded, Reregistering')
+
+            await plugin.client.commands.register_commands()
+
+            logger.info('Reregistered commands')
+            await ctx.edit('Reloaded and Reregistered')

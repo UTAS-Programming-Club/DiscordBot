@@ -1,12 +1,16 @@
 """This module contains functions used to load and manage plugins."""
 
 import crescent
+import logging
+import traceback
 from collections import Counter
 from importlib import import_module, reload
 from pathlib import Path
 
 # TODO: Log plugin instead instead of directly printing
 # TODO: Keep reloading after failure in one file
+
+logger = logging.getLogger(__name__)
 
 
 def get_plugin_names(plugin_manager: crescent.PluginManager) -> Counter[str]:
@@ -44,10 +48,38 @@ def reload_plugin_manager() -> None:
     reload(module)
 
 
-async def reload_plugins(
-        plugin_manager: crescent.PluginManager, path: str, strict: bool = True
+def reload_plugin(
+    plugin_manager: crescent.PluginManager, path: str, strict: bool = True
 ) -> None:
-    """(Re)load existing/new plugins, unload old ones and register commands."""
+    """Reload a single plugin with error reporting but no exceptions."""
+    try:
+        plugin_manager.load(path, strict=strict)
+        plugin_manager.load(path, refresh=True, strict=strict)
+    except Exception as error:
+        # Try to find first exception in erroring plugin
+        tb = error.__traceback__
+        # First error is in this file which is not wanted despite
+        # passing path check
+        if tb is not None:
+            tb = tb.tb_next
+        while tb is not None:
+            plugin_path = tb.tb_frame.f_code.co_filename
+            if 'PCBot' not in plugin_path:
+                tb = tb.tb_next
+                continue
+            traceback.print_tb(tb)
+            break
+        logger.error(error)
+
+
+# From https://github.com/hikari-crescent/hikari-crescent/blob/v0.6.6/crescent/plugin.py
+# Afaik I can use this despite an incompatable licence with mpl provided this
+# fuction(file?) remains under mpl since it is "Covered Software" by 3.3 and
+# then mention Exhibit B
+async def reload_plugins(
+    plugin_manager: crescent.PluginManager, path: str, strict: bool = True
+) -> None:
+    """Load new plugins, reloads existing ones and unload old ones."""
     pathlib_path = Path(*path.split("."))
 
     # Used to avoid the a load erroring because it tried to load
@@ -56,10 +88,5 @@ async def reload_plugins(
 
     for glob_path in sorted(pathlib_path.glob(r'**/[!_]*.py')):
         plugin_path = ".".join(glob_path.as_posix()[:-3].split("/"))
-        plugin_manager.load(plugin_path, strict=strict)
-        plugin_manager.load(plugin_path, refresh=True, strict=strict)
+        reload_plugin(plugin_manager, plugin_path)
         print(glob_path)
-
-    # Reregister commands with discord
-    await plugin_manager._client.commands.purge_commands()
-    await plugin_manager._client.commands.register_commands()
