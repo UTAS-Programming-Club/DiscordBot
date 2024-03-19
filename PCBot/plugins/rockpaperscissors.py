@@ -74,9 +74,9 @@ plugin = crescent.Plugin[hikari.GatewayBot, BotData]()
 class RPSPick(Enum):
     """Enum to store each user's rock paper scissors selection."""
 
-    Rock     = 1
-    Paper    = 2
-    Scissors = 3
+    Rock     = 0
+    Paper    = 1
+    Scissors = 2
 
 
 class RPSView(miru.View):
@@ -86,6 +86,8 @@ class RPSView(miru.View):
     challengee: hikari.User
     challenger_pick: Optional[RPSPick] = None
     challengee_pick: Optional[RPSPick] = None
+    er_pick = 0
+    ee_pick = 0
     
     message_emojis = ['\N{ROCK}', '\N{SCROLL}', '\N{BLACK SCISSORS}']
 
@@ -93,27 +95,28 @@ class RPSView(miru.View):
         """Determine if the game has finished and if so who won."""
         if self.challenger_pick is None or self.challengee_pick is None:
             return
-        if self.challenger_pick == self.challengee_pick:
+        self.er_pick = ((self.challenger_pick.value) % 3)
+        self.ee_pick = ((self.challengee_pick.value) %3)
+        
+        if self.er_pick == self.ee_pick:
             await ctx.edit_response('It was a tie!')
+        # rock = 0, paper = 1, scissors = 2
         elif ((
-           self.challenger_pick is RPSPick.Paper and
-           self.challengee_pick is RPSPick.Rock
+            self.er_pick == 1 and self.ee_pick == 0
           ) or (
-           self.challenger_pick is RPSPick.Scissors and
-           self.challengee_pick is RPSPick.Paper
+            self.er_pick == 0 and self.ee_pick == 2
           ) or (
-           self.challenger_pick is RPSPick.Rock and
-           self.challengee_pick is RPSPick.Scissors
+            self.er_pick == 2 and self.ee_pick == 1
         )):
             await ctx.edit_response(
-              f'{self.message_emojis[(self.challenger_pick.value - 1) % 3]} >> {self.message_emojis[(self.challengee_pick.value - 1) % 3]}\n'
+              f'{self.message_emojis[self.er_pick]} >>> {self.message_emojis[self.ee_pick]}\n'
               f'{self.challenger_pick.name} beats '
               f'{self.challengee_pick.name.lower()}, '
               f'{self.challenger.mention} wins!'
             )
         else:
             await ctx.edit_response(
-              f'{self.message_emojis[(self.challengee_pick.value - 1) % 3]} >> {self.message_emojis[(self.challenger_pick.value - 1) % 3]}\n'
+              f'{self.message_emojis[self.ee_pick]} >>> {self.message_emojis[self.er_pick]}\n'
               f'{self.challengee_pick.name} beats '
               f'{self.challenger_pick.name.lower()}, '
               f'{self.challengee.mention} wins!'
