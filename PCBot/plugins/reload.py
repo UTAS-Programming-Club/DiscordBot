@@ -6,7 +6,9 @@ import logging
 import os
 from crescent.ext import docstrings
 from PCBot.botdata import BotData
-from PCBot.pluginmanager import get_plugin_names
+from PCBot.pluginmanager import (
+    get_plugin_names, reload_plugin_manager, reload_plugins
+)
 from typing import Optional
 
 # TODO: Reload botdata.py, only if can be done without losing data
@@ -16,7 +18,7 @@ from typing import Optional
 # TODO: Indicate which plugins/commands are modified, modified or malformed
 # TODO: Specifically list which exceptions are possible during plugin loading
 # TODO: Change client status during reload?
-# TODO: List error during a failed reload
+# TODO: Name file causing error, log currently says it occurred in this module
 # TODO: Detect all plugin errors during reload
 
 # Load guild id
@@ -49,18 +51,12 @@ class ReloadCommand:
 
         await ctx.respond('Reloading...', ephemeral=True)
 
-        # Used to avoid an error with client being undefined after unload_all
         plugins = plugin.client.plugins
         old_plugins = get_plugin_names(plugins)
-        # Used to avoid the first load_folder erroring because it tried to load
-        # an already loaded plugin
-        plugins.unload_all()
-        # Load unloaded plugins, if any plugin it finds was previously loaded
-        # then the old code is reused
+
         try:
-            plugins.load_folder(plugin_folder)
-            # Reload previously loaded plugins to use newest code
-            plugins.load_folder(plugin_folder, refresh=True)
+            reload_plugin_manager()
+            await reload_plugins(plugins, plugin_folder)
             safe_mode = False
         except Exception as error:
             # Try to find first exception in erroring plugin
@@ -74,13 +70,14 @@ class ReloadCommand:
                     tb = tb.tb_next
                     continue
                 base_name = os.path.basename(plugin_path)
-                malformed_plugin_path = base_name.split('.')[0]
+                if 'pluginmanager' not in base_name:
+                    malformed_plugin_path = base_name.split('.')[0]
                 break
-            # Used to prevent load erroring, not sure why unload_all fails here
             plugins.unload(__name__)
             plugins.load(__name__)
             plugins.load(__name__, refresh=True)
             safe_mode = True
+            logger.error(error)
 
         if safe_mode and malformed_plugin_path is not None:
             logger.warning(
