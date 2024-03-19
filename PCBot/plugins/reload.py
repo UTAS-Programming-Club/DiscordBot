@@ -60,7 +60,7 @@ class ReloadCommand:
         try:
             plugins.load_folder(plugin_folder)
             # Reload previously loaded plugins to use newest code
-            loaded_plugins = plugins.load_folder(plugin_folder, refresh=True)
+            plugins.load_folder(plugin_folder, refresh=True)
             safe_mode = False
         except Exception as error:
             # Try to find first exception in erroring plugin
@@ -79,7 +79,7 @@ class ReloadCommand:
             # Used to prevent load erroring, not sure why unload_all fails here
             plugins.unload(__name__)
             plugins.load(__name__)
-            loaded_plugins = [plugins.load(__name__, refresh=True)]
+            plugins.load(__name__, refresh=True)
             safe_mode = True
 
         if safe_mode and malformed_plugin_path is not None:

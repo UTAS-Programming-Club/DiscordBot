@@ -4,6 +4,7 @@ import crescent
 import hikari
 import miru
 from PCBot.botdata import BotData
+from PCBot.pluginmanager import get_plugin_info, print_plugin_info
 
 # TODO: Decide if loading in safe mode is allowed, reuse code from reload.py
 # TODO: Report loaded commands/modules to the console.
@@ -19,7 +20,9 @@ miru_client = miru.Client(bot)
 crescent_client = crescent.Client(bot, BotData(miru_client))
 
 # Load plugins
-loaded_plugins = crescent_client.plugins.load_folder('PCBot.plugins')
+crescent_client.plugins.load_folder('PCBot.plugins')
+plugin_info = get_plugin_info(crescent_client.plugins)
+print_plugin_info = print_plugin_info(plugin_info)
 
 # Run the bot
 if __name__ == '__main__':
