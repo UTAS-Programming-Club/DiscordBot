@@ -4,7 +4,7 @@ import crescent
 import hikari
 import logging
 from crescent.ext import docstrings
-from PCBot.botdata import BotData, guild_id_path, get_token_file_path
+from PCBot.botdata import BotData
 from PCBot.pluginmanager import (
     get_plugin_names, reload_plugin_manager, reload_plugins
 )
@@ -20,10 +20,6 @@ from typing import Optional
 # TODO: Detect all plugin errors during reload
 # TODO: Reenable error reporting, it only catches errors in pluginmanager now
 
-# Load guild id
-with open(get_token_file_path(guild_id_path)) as f:
-    guild_id = int(f.read().strip())
-
 logger = logging.getLogger(__name__)
 plugin = crescent.Plugin[hikari.GatewayBot, BotData]()
 plugin_folder = 'PCBot.plugins'
@@ -31,7 +27,7 @@ plugin_folder = 'PCBot.plugins'
 
 @plugin.include
 @docstrings.parse_doc
-@crescent.command(name='reload', guild=guild_id)
+@crescent.command(name='reload')
 class ReloadCommand:
     """
     Reload the bot.
