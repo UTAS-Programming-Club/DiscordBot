@@ -15,10 +15,6 @@ from typing import Optional
 # TODO: Disable buttons visibly after the round is over or timeout has occurred
 # TODO: Convert to user command or at least offer that option
 
-# Load guild id
-with open('./secrets/guild') as f:
-    guild_id = int(f.read().strip())
-
 plugin = crescent.Plugin[hikari.GatewayBot, BotData]()
 
 # Not useful for this as command options can be seen by users.
@@ -88,7 +84,7 @@ class RPSView(miru.View):
     challengee_pick: Optional[RPSPick] = None
     er_pick = 0
     ee_pick = 0
-    
+
     message_emojis = ['\N{ROCK}', '\N{SCROLL}', '\N{BLACK SCISSORS}']
 
     async def determine_winner(self, ctx: miru.ViewContext) -> None:
@@ -109,14 +105,16 @@ class RPSView(miru.View):
             self.er_pick == 2 and self.ee_pick == 1
         )):
             await ctx.edit_response(
-              f'{self.message_emojis[self.er_pick]} >>> {self.message_emojis[self.ee_pick]}\n'
+              f'{self.message_emojis[self.er_pick]} '
+              f'>>> {self.message_emojis[self.ee_pick]}\n'
               f'{self.challenger_pick.name} beats '
               f'{self.challengee_pick.name.lower()}, '
               f'{self.challenger.mention} wins!'
             )
         else:
             await ctx.edit_response(
-              f'{self.message_emojis[self.ee_pick]} >>> {self.message_emojis[self.er_pick]}\n'
+              f'{self.message_emojis[self.ee_pick]} '
+              f'>>> {self.message_emojis[self.er_pick]}\n'
               f'{self.challengee_pick.name} beats '
               f'{self.challenger_pick.name.lower()}, '
               f'{self.challengee.mention} wins!'
@@ -164,13 +162,14 @@ class RPSView(miru.View):
 
 @plugin.include
 @docstrings.parse_doc
-@crescent.command(name='rpschallenge', guild=guild_id, dm_enabled=False)
+@crescent.command(name='rpschallenge', dm_enabled=False)
 class RPSChallengeCommand:
     """
     Challenge a user to rock paper scissors.
 
     Requested by iluka wighton(razer304).
-    Implemented by something sensible(somethingsensible).
+    Implemented by something sensible(somethingsensible) &
+                   Camtas(camtas).
 
     Args:
         user: User to challenge.
@@ -184,7 +183,7 @@ class RPSChallengeCommand:
         view.challenger = ctx.user
         view.challengee = self.user.user
         await ctx.respond(
-          f'{self.user.user.mention}'
+          f'{self.user.user.mention} '
           'You have been challenged to Rock Paper Scissors!\n'
           'Both players now need to make their decision below:',
           components=view

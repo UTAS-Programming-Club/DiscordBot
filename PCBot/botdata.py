@@ -2,6 +2,8 @@
 
 import dataclasses
 import miru
+import os
+
 
 @dataclasses.dataclass
 class BotData:
@@ -9,3 +11,16 @@ class BotData:
 
     miru: miru.Client
 
+
+token_path = './secrets/token'
+guild_id_path = './secrets/guild'
+
+
+def get_token_file_path(file: str) -> None:
+    """Append .txt to file path if that file exists.
+
+       Makes it easier to setup the bot on windows.
+    """
+    if os.path.isfile(file + '.txt'):
+        return file + '.txt'
+    return file

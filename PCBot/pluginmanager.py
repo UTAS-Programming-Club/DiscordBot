@@ -1,12 +1,17 @@
 """This module contains functions used to load and manage plugins."""
 
 import crescent
+import importlib
+import logging
+import sys
+import traceback
 from collections import Counter
-from importlib import import_module, reload
 from pathlib import Path
 
 # TODO: Log plugin instead instead of directly printing
 # TODO: Keep reloading after failure in one file
+
+logger = logging.getLogger(__name__)
 
 
 def get_plugin_names(plugin_manager: crescent.PluginManager) -> Counter[str]:
@@ -40,14 +45,58 @@ def print_plugin_info(
 
 def reload_plugin_manager() -> None:
     """Reload this module."""
-    module = import_module(__name__)
-    reload(module)
+    module = importlib.import_module(__name__)
+    importlib.reload(module)
 
 
-async def reload_plugins(
-        plugin_manager: crescent.PluginManager, path: str, strict: bool = True
+def reload_plugin(
+    plugin_manager: crescent.PluginManager, path: str, strict: bool = True
 ) -> None:
-    """(Re)load existing/new plugins, unload old ones and register commands."""
+    """Reload a single plugin with error reporting but no exceptions."""
+    try:
+        plugin_manager.load(path, strict=strict)
+        plugin_manager.load(path, refresh=True, strict=strict)
+    except:
+        # From https://stackoverflow.com/a/45771867
+        # Try to find first trace line within erroring plugin
+        spec = importlib.util.find_spec(path)
+        if spec is None:
+            # If failed to find plugin then just print entire traceback
+            print(traceback.format_exc())
+        else:
+            file_name = spec.loader.get_filename()
+            extracts = traceback.extract_tb(sys.exc_info()[2])
+            count = len(extracts)
+            # Find the first occurrence of the plugin file name
+            for i, extract in enumerate(extracts):
+                if extract[0] == file_name:
+                    break
+                count -= 1
+            traceback_output = traceback.format_exc(limit=-count)
+            logger.error('The following error occurred while loading' + path)
+            # Some exceptions fail to display properly
+            # This method with format_exc is actually the best method I have
+            # found as iterating through a traceback with tb.tb_next actually
+            # doesn't include the required line at the bottom, neither does
+            # inspect.trace's list
+            # So just missing the traceback line and some module info is
+            # fine as I can work around it
+            if not traceback_output.startswith('Traceback'):
+                print('Traceback (most recent call last):')
+            if traceback_output.endswith('\n'):
+                traceback_output = traceback_output[:-1]
+            print(traceback_output)
+            print('test')
+
+
+# From https://github.com/hikari-crescent/hikari-crescent/blob/v0.6.6/crescent/plugin.py
+# Afaik I can use this despite an incompatable licence with mpl provided this
+# fuction(file?) remains under mpl since it is "Covered Software" by 3.3 and
+# then mention Exhibit B
+async def reload_plugins(
+    plugin_manager: crescent.PluginManager, path: str, strict: bool = True
+) -> None:
+    """Load new plugins, reloads existing ones and unload old ones."""
     pathlib_path = Path(*path.split("."))
 
     # Used to avoid the a load erroring because it tried to load
@@ -56,10 +105,4 @@ async def reload_plugins(
 
     for glob_path in sorted(pathlib_path.glob(r'**/[!_]*.py')):
         plugin_path = ".".join(glob_path.as_posix()[:-3].split("/"))
-        plugin_manager.load(plugin_path, strict=strict)
-        plugin_manager.load(plugin_path, refresh=True, strict=strict)
-        print(glob_path)
-
-    # Reregister commands with discord
-    await plugin_manager._client.commands.purge_commands()
-    await plugin_manager._client.commands.register_commands()
+        reload_plugin(plugin_manager, plugin_path)
