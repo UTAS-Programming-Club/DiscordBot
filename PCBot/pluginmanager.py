@@ -11,6 +11,7 @@ from pathlib import Path
 # TODO: Avoid unloading reload.py
 # TODO: Specifically list which exceptions are possible during plugin loading
 # TODO: Use same error reporting in reload_plugin_manager as reload_plugin
+# TODO: Fix the get_plugin_names() list being out of order while in safe mode
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +59,7 @@ def reload_plugin(
         plugin_manager.load(path, strict=strict)
         plugin_manager.load(path, refresh=True, strict=strict)
     except:
+        logger.error(f'The following error occurred while loading {path}:')
         # From https://stackoverflow.com/a/45771867
         # Try to find first trace line within erroring plugin
         spec = importlib.util.find_spec(path)
@@ -74,7 +76,6 @@ def reload_plugin(
                     break
                 count -= 1
             traceback_output = traceback.format_exc(limit=-count)
-            logger.error('The following error occurred while loading' + path)
             # Some exceptions fail to display properly
             # This method with format_exc is actually the best method I have
             # found as iterating through a traceback with tb.tb_next actually

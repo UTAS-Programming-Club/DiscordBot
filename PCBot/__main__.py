@@ -9,7 +9,6 @@ from PCBot.botdata import (
 from PCBot.pluginmanager import get_plugin_info, print_plugin_info
 
 # TODO: Decide if loading in safe mode is allowed, reuse code from reload.py
-# TODO: Report loaded commands/modules to the console.
 
 # Load bot token
 with open(get_token_file_path(token_path)) as f:

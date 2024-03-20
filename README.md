@@ -23,6 +23,7 @@ PC club members are welcome to contribute and there is a section in each docstri
 * PEP8 AND PEP257 checking, https://www.codewof.co.nz/style/python3/ works until that happens though
 * Combine previous with formatter, yapf, black?
 * Show full command docstrings somewhere, help command? Then have non pinging mentions for required and implemented by lines
+* Log all run commands with the requester's name in the console
 * More commands
 * Anything listed as TODO within the plugins
 

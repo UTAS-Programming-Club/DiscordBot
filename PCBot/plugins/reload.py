@@ -4,7 +4,6 @@ import crescent
 import hikari
 import logging
 from crescent.ext import docstrings
-from PCBot.botdata import BotData
 from PCBot.pluginmanager import (
     get_plugin_names, reload_plugin_manager, reload_plugins
 )
@@ -21,7 +20,7 @@ from typing import Optional
 # TODO: Add backup for if reload.py and pluginmanager.py fail? Restart command?
 
 logger = logging.getLogger(__name__)
-plugin = crescent.Plugin[hikari.GatewayBot, BotData]()
+plugin = crescent.Plugin[hikari.GatewayBot, None]()
 plugin_folder = 'PCBot.plugins'
 
 
@@ -62,8 +61,8 @@ class ReloadCommand:
         # reregister option was set and crescent is still functional, the
         # loaded commands will be reregistered in discord. This second method
         # is currently the best method to confirm which commands are loaded
-        # regardless of errors since even when working properly only plugin
-        # modules are reported to the console or discord(when the option set).
+        # regardless of errors since even when working properly, only loaded
+        # plugins are reported to the console or discord(with that option set).
         safe_mode: bool
         malformed_plugin_path: Optional[str] = None
         reloaded_text: str
@@ -118,9 +117,9 @@ class ReloadCommand:
 
         # Reregister commands with discord
         if self.reregister:
-            await ctx.edit(reloaded_text + ', Reregistering')
+            await ctx.edit(reloaded_text + ', reregistering')
 
             await plugin.client.commands.register_commands()
 
             logger.info('Reregistered commands')
-            await ctx.edit(reloaded_text + ', Reregistered')
+            await ctx.edit(reloaded_text + ', reregistered')
