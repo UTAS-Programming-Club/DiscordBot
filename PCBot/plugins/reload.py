@@ -16,10 +16,9 @@ from typing import Optional
 # TODO: Indicate which plugins/commands are modified, modified or malformed
 # TODO: Specifically list which exceptions are possible during plugin loading
 # TODO: Change client status during reload?
-# TODO: Name file causing error, log currently says it occurred in this module
-# TODO: Reenable error reporting, it only catches errors in pluginmanager now
-# TODO: Report loading errors again, pluginmanager ignores them
 # TODO: Prevent unloading reload command if on disk version has an error
+# TODO: Report plugins that failed to load to whoever executed the command
+# TODO: Add backup for if reload.py and pluginmanager.py fail? Restart command?
 
 logger = logging.getLogger(__name__)
 plugin = crescent.Plugin[hikari.GatewayBot, BotData]()
@@ -44,6 +43,27 @@ class ReloadCommand:
 
     async def callback(self, ctx: crescent.Context) -> None:
         """Handle reload command being run."""
+        # Safe mode was originally meant to be used whenever there was an error
+        # while loading plugins and resulted in only the reload plugin being
+        # available.
+        # Currently, plugin load errors are only printed to the console and
+        # keep all other plugins functional. Safe mode is therefore only used
+        # where there is an error within reload.py or pluginmanager.py.
+        # i.e. errors with loading plugins generally but not with a specific
+        # one. Additionally, this leaves the state of plugins unpredictable
+        # beyond the reload command being available. That is unless a second
+        # error occurred during reloading the reload plugin in which case only
+        # plugins that managed to be reloaded before the first error will work
+        # and the bot will have to be restarted to be fully functional again.
+        # In the event of the first kind of error, there are two main ways for
+        # the resulting plugin state to be reported. The first is the loaded
+        # plugin checks at the end of this method which lists which plugins are
+        # still loaded and which are not. The second is that if both the
+        # reregister option was set and crescent is still functional, the
+        # loaded commands will be reregistered in discord. This second method
+        # is currently the best method to confirm which commands are loaded
+        # regardless of errors since even when working properly only plugin
+        # modules are reported to the console or discord(when the option set).
         safe_mode: bool
         malformed_plugin_path: Optional[str] = None
         reloaded_text: str
@@ -57,26 +77,17 @@ class ReloadCommand:
             reload_plugin_manager()
             await reload_plugins(plugins, plugin_folder)
             safe_mode = False
-        except Exception as error:
-            # Try to find first exception in erroring plugin
-            # tb = error.__traceback__
-            #  First error is in this file so not wanted despite passing check
-            # if tb is not None:
-            #     tb = tb.tb_next
-            # while tb is not None:
-            #     plugin_path = tb.tb_frame.f_code.co_filename
-            #     if 'PCBot' not in plugin_path:
-            #         tb = tb.tb_next
-            #         continue
-            #     base_name = os.path.basename(plugin_path)
-            #     if 'pluginmanager' not in base_name:
-            #         malformed_plugin_path = base_name.split('.')[0]
-            #     break
+        except:
+            logger.exception('An error occurred while reloading plugins:')
+            # reload_plugins unloads all plugins in which case load(refresh)
+            # will error because it also unloads the plugin so need to do a
+            # normal load first but that will fail if the error occurred before
+            # unloading plugins or after the reload plugin was already reloaded
+            # so need to unload it first which does nothing if it is not loaded
             plugins.unload(__name__)
             plugins.load(__name__)
             plugins.load(__name__, refresh=True)
             safe_mode = True
-            logger.error(error)
 
         if safe_mode and malformed_plugin_path is not None:
             reloaded_text = \

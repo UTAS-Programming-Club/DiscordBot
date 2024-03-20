@@ -8,8 +8,9 @@ import traceback
 from collections import Counter
 from pathlib import Path
 
-# TODO: Log plugin instead instead of directly printing
-# TODO: Keep reloading after failure in one file
+# TODO: Avoid unloading reload.py
+# TODO: Specifically list which exceptions are possible during plugin loading
+# TODO: Use same error reporting in reload_plugin_manager as reload_plugin
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +87,6 @@ def reload_plugin(
             if traceback_output.endswith('\n'):
                 traceback_output = traceback_output[:-1]
             print(traceback_output)
-            print('test')
 
 
 # From https://github.com/hikari-crescent/hikari-crescent/blob/v0.6.6/crescent/plugin.py
