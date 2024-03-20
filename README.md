@@ -13,8 +13,9 @@ python -m PCBot
 
 # Deploying Bot
 ```sh
-python -OO -m PCBot
+python -O -m PCBot
 ```
+This should be -OO but currently that causes a error inside crescent.
 
 # Desired Features
 PC club members are welcome to contribute and there is a section in each docstring for credits

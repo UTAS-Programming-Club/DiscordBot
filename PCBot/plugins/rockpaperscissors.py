@@ -17,22 +17,6 @@ from typing import Optional
 
 plugin = crescent.Plugin[hikari.GatewayBot, BotData]()
 
-# Not useful for this as command options can be seen by users.
-# Keeping as autocomplete may be useful for something else.
-# async def rps_autocomplete_response(
-#     ctx: crescent.AutocompleteContext,
-#     option: hikari.AutocompleteInteractionOption
-# ) -> list[tuple[str, str]]:
-#     return
-#
-#
-# async def fetch_rps_autocomplete_options(
-#   ctx: crescent.AutocompleteContext,
-#   option: hikari.AutocompleteInteractionOption
-# ) -> list[tuple[str, str]]:
-#     _options = await ctx.fetch_options()
-#     return []
-
 # Not useful as returning False from modal_check still closes the Modal.
 # I was hoping that it would show an error and allow changing input.
 # Keeping as it may be useful for something else.

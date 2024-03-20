@@ -48,6 +48,17 @@ def print_plugin_info(
             print(f'    {app_command.name}: {app_command.description}')
 
 
+# I planned to implement this using get_plugin_info but decided this was easier
+def get_command_choices(plugin_manager: crescent.PluginManager)\
+  -> list[tuple[str, str]]:
+    """Provide a listed of loaded commands as crescent autocomplete tuples."""
+    return [
+      (child.metadata.app_command.name, child.metadata.app_command.name)
+      for plugin in plugin_manager.plugins.values()
+      for child in plugin._children
+    ]
+
+
 def reload_plugin_manager() -> None:
     """Reload this module."""
     module = importlib.import_module(__name__)

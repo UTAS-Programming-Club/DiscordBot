@@ -4,9 +4,10 @@ import crescent
 import hikari
 import inspect
 from crescent.ext import docstrings
-from PCBot.pluginmanager import get_plugin_info
+from PCBot.pluginmanager import get_plugin_info, get_command_choices
 
 # TODO: Add sorting to commands
+# TODO: Add backup for missing args section in docstring(if even present)
 
 plugin = crescent.Plugin[hikari.GatewayBot, None]()
 
@@ -15,6 +16,14 @@ help_start = inspect.cleandoc('''```
   This is a bot designed by members of the UTas Programming Club.
 
   Available plugins and commands:''')
+
+
+async def command_autocomplete(
+  ctx: crescent.AutocompleteContext,
+  option: hikari.AutocompleteInteractionOption
+) -> list[tuple[str, str]]:
+    """Generate a list of commands for option autocomplete."""
+    return get_command_choices(plugin.client.plugins)
 
 
 @plugin.include
@@ -30,7 +39,7 @@ class HelpCommand:
 
     public = crescent.option(bool, 'Show response publicly', default=False)
     command = crescent.option(str, 'Show detailed info for a single command',
-                              default='')
+                              default='', autocomplete=command_autocomplete)
 
     async def basic_help(self, ctx: crescent.Context) -> None:
         """Show a list of plugins and commands."""
@@ -53,7 +62,8 @@ class HelpCommand:
                   f'    {app_command.description}\n'
                 )
 
-        output = output + '```'
+        output = (f'{output}\nBuilt using hikari, hikari-crescent and '
+                  'hikari-miru.```')
         await ctx.respond(output, ephemeral=not self.public)
 
     async def command_help(self, ctx: crescent.Context) -> None:
