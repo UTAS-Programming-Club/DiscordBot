@@ -68,8 +68,8 @@ class HelpCommand:
         }
 
         if self.command not in command_info:
-            await ctx.response(f'{self.command} is not a valid command.',
-                               ephemeral=True)
+            await ctx.respond(f'{self.command} is not a valid command.',
+                              ephemeral=True)
             return
 
         command = command_info[self.command]
