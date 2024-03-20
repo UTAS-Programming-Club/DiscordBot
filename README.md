@@ -24,6 +24,7 @@ PC club members are welcome to contribute and there is a section in each docstri
 * Combine previous with formatter, yapf, black?
 * Show full command docstrings somewhere, help command? Then have non pinging mentions for required and implemented by lines
 * Log all run commands with the requester's name in the console
+* Make sure all command docstrings have requested by, implemented by and arguments sections for help command
 * More commands
 * Anything listed as TODO within the plugins
 

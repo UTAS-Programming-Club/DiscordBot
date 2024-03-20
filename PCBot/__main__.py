@@ -29,7 +29,7 @@ crescent_client = crescent.Client(bot, BotData(miru_client),
 # Load plugins
 crescent_client.plugins.load_folder('PCBot.plugins')
 plugin_info = get_plugin_info(crescent_client.plugins)
-print_plugin_info = print_plugin_info(plugin_info)
+print_plugin_info(plugin_info)
 
 # Run the bot
 if __name__ == '__main__':

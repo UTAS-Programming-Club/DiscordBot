@@ -12,6 +12,8 @@ from pathlib import Path
 # TODO: Specifically list which exceptions are possible during plugin loading
 # TODO: Use same error reporting in reload_plugin_manager as reload_plugin
 # TODO: Fix the get_plugin_names() list being out of order while in safe mode
+# TODO: Make get_plugin_info return be dict[str, dict[str, AppCommandMeta]?
+#       This would make parts of help much easier to implement
 
 logger = logging.getLogger(__name__)
 
@@ -25,12 +27,12 @@ def get_plugin_names(plugin_manager: crescent.PluginManager) -> Counter[str]:
 # not find another way to access command info without manually finding all
 # classes and functions with plugin.include which I assume is possible
 def get_plugin_info(plugin_manager: crescent.PluginManager)\
- -> dict[str, tuple[crescent.internal.AppCommand]]:
+ -> dict[str, tuple[crescent.internal.AppCommandMeta]]:
     """Provide a list of loaded plugins along with their commands."""
-    loaded_commands: dict[str, tuple[crescent.internal.AppCommand]] = {}
+    loaded_commands: dict[str, tuple[crescent.internal.AppCommandMeta]] = {}
     for plugin_name, plugin in plugin_manager.plugins.items():
         loaded_commands[plugin_name] = tuple([
-            child.metadata.app_command for child in plugin._children
+            child.metadata for child in plugin._children
         ])
     return loaded_commands
 
@@ -42,7 +44,8 @@ def print_plugin_info(
     for plugin_name, commands in plugin_info.items():
         print(plugin_name)
         for command in commands:
-            print(f'    {command.name}: {command.description}')
+            app_command = command.app_command
+            print(f'    {app_command.name}: {app_command.description}')
 
 
 def reload_plugin_manager() -> None:
