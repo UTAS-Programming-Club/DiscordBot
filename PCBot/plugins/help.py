@@ -27,6 +27,7 @@ class HelpCommand:
     Requested by something sensible(somethingsensible).
     Implemented by something sensible(somethingsensible).
     """
+    public = crescent.option(bool, 'Show response publicly', default=False)
 
     async def callback(self, ctx: crescent.Context) -> None:
         """Handle help command being run."""
@@ -38,7 +39,7 @@ class HelpCommand:
           for plugin_name in plugin_info
           for command in plugin_info[plugin_name]
         ]
-        longest_name_len = max(full_name_list)
+        longest_name_len = max(name_lens)
 
         for plugin_name, commands in plugin_info.items():
             output = output + f'    {plugin_name}:\n'
@@ -47,4 +48,7 @@ class HelpCommand:
                                    f'    {command.description}\n')
 
         output = output + '```'
-        await ctx.respond(output, ephemeral=True)
+        if self.public:
+            await ctx.respond(output)
+        else:
+            await ctx.respond(output, ephemeral=True)
