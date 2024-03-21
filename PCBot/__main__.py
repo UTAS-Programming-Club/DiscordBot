@@ -6,6 +6,7 @@ import miru
 from PCBot.botdata import (
     BotData, token_path, guild_id_path, get_token_file_path
 )
+from PCBot.mocking import mock_command
 from PCBot.pluginmanager import get_plugin_info, print_plugin_info
 
 # TODO: Decide if loading in safe mode is allowed, reuse code from reload.py
@@ -34,3 +35,5 @@ print_plugin_info(plugin_info)
 # Run the bot
 if __name__ == '__main__':
     bot.run()
+    #mock_command(crescent_client, 'PCBot.plugins.help', 0,
+    #             {'command': 'rpschallenge'})
