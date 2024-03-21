@@ -5,15 +5,22 @@ import crescent
 import hikari
 import inspect
 from PCBot.pluginmanager import get_plugin_info
+from PCBot.testing.hikari.test_users_comparision import make_user
 
 # TODO: Support more crescent features
 # TODO: Add error checking for invalid plugin or command_index
+# TODO: Check types of other builtins before using setattr
 
 
 class MockContext:
     """A partial console implementation of crescent.Context."""
 
+    user: hikari.users.UserImpl
     message_index = 0
+
+    def __init__(self, app: hikari.traits.RESTAware):
+        """Create mock context, currently only user is mocked."""
+        self.user = make_user(app, 1, 'testuser1')
 
     async def respond(self, output: str, ephemeral: bool = False):
         """Mock crescent.Context.respond with console."""
@@ -21,7 +28,7 @@ class MockContext:
         if ephemeral:
             print('#', end='')
         else:
-            print('', end='')
+            print(' ', end='')
         print(f'{self.message_index}: {output}')
 
     async def edit(self, output: str):
@@ -36,7 +43,7 @@ def mock_command(crescent_client: crescent.Client, plugin: str,
     plugin_info = get_plugin_info(crescent_client.plugins)
     command = plugin_info[plugin][command_index]
     mocked_class = command.owner()
-    mock_context = MockContext()
+    mock_context = MockContext(crescent_client.app)
 
     print(f'Mocking {command.app_command.name} command from {plugin}\n')
 
