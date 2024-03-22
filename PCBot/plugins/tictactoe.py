@@ -31,16 +31,19 @@ class TicTacToeView(miru.View):
     challengee: hikari.User
     current_player: hikari.User
 
-    def __init__(self, challenger: hikari.User, challengee: hikari.User)\
-    -> None:
+    grid_size: int
+
+    def __init__(self, challenger: hikari.User, challengee: hikari.User,
+                 grid_size: int) -> None:
         """Create view and buttons to manage tic tac toe game."""
         super().__init__()
         self.challenger = challenger
         self.challengee = challengee
         # This is arbitrary
         self.current_player = self.challenger
-        for cell_value in range(9):
-            self.add_item(TicTacToeButton(cell_value))
+        self.grid_size = grid_size
+        for cell_value in range(grid_size * grid_size):
+            self.add_item(TicTacToeButton(cell_value, grid_size))
 
     # From https://stackoverflow.com/a/39923094
     def check_rows(self, board: list[list[hikari.ButtonStyle]])\
@@ -75,6 +78,7 @@ class TicTacToeView(miru.View):
         return self.check_diagonals(board)
 
     def check_draw(self) -> bool:
+        """Check for a draw by checking if all cells are taken."""
         for child in self.children:
             if child.style == default_style:
                 return False
@@ -86,11 +90,11 @@ class TicTacToeView(miru.View):
         row: Optional[list[hikari.ButtonStyle]] = None
         row_num = -1
         for child in self.children:
-            if child.cell_number // 3 != row_num:
+            if child.cell_number // self.grid_size != row_num:
                 if row is not None:
                     grid.append(row)
                 row = []
-                row_num = child.cell_number // 3
+                row_num = child.cell_number // self.grid_size
             row.append(child.style)
         grid.append(row)
         return grid
@@ -131,10 +135,11 @@ class TicTacToeButton(miru.Button):
 
     cell_number: int
 
-    def __init__(self, cell_number: int) -> None:
+    def __init__(self, cell_number: int, grid_size: int) -> None:
         """Create and initally style a button."""
         super().__init__(
-          label=str(cell_number + 1), row=cell_number // 3, style=default_style
+          label=str(cell_number + 1), row=cell_number // grid_size,
+          style=default_style
         )
         self.cell_number = cell_number
 
@@ -164,7 +169,6 @@ class TicTacToeButton(miru.Button):
         await ctx.edit_response(updated_message, components=self.view)
 
 
-
 @plugin.include
 @docstrings.parse_doc
 @crescent.command(name='tictactoe', dm_enabled=False)
@@ -180,13 +184,28 @@ class TicTacToeCommand:
     """
 
     user = crescent.option(hikari.User)
+    allow_experimental = crescent.option(
+        bool, 'Allow the use of experimental settings',
+        default=False
+    )
+    experimental_grid_size = crescent.option(int, default=3)
 
     async def callback(self, ctx: crescent.Context) -> None:
         """Handle tictactoe command being run by showing button grid view."""
-        view = TicTacToeView(challenger=ctx.user, challengee=self.user.user)
+        if self.allow_experimental:
+            view = TicTacToeView(
+                challenger=ctx.user, challengee=self.user.user,
+                grid_size=self.experimental_grid_size
+            )
+            title_prefix = 'experimental'
+        else:
+            view = TicTacToeView(
+                challenger=ctx.user, challengee=self.user.user
+            )
+            title_prefix = ''
         await ctx.respond(
           f'{self.user.user.mention} '
-          'You have been challenged to Tic Tac Toe!\n'
+          f'You have been challenged to {title_prefix} Tic Tac Toe!\n'
           f'Blue is {ctx.user.mention}, red is {self.user.user.mention}.\n'
           f"It is currently {view.current_player.mention}'s turn.\n",
           components=view
