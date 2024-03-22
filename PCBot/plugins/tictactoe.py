@@ -53,7 +53,7 @@ class TicTacToeView(miru.View):
 
     def check_diagonals(self, board: list[list[hikari.ButtonStyle]])\
     -> Optional[hikari.ButtonStyle]:
-        """Check if a player has board size peices along a diagonal."""
+        """Check if a player has board size pieces along a diagonal."""
         if len(set([board[i][i] for i in range(len(board))])) == 1:
             return board[0][0]
         if len(set([
@@ -73,6 +73,12 @@ class TicTacToeView(miru.View):
                 return result
         # Otherwise check diagonals
         return self.check_diagonals(board)
+
+    def check_draw(self) -> bool:
+        for child in self.children:
+            if child.style == default_style:
+                return False
+        return True
 
     def produce_board(self) -> list[list[hikari.ButtonStyle]]:
         """Convert the board into a grid for check_win and co."""
@@ -94,7 +100,8 @@ class TicTacToeView(miru.View):
         # Check for winner
         board = self.produce_board()
         winner_style = self.check_win(board)
-        if (winner_style != challenger_style and
+        draw = self.check_draw()
+        if (not draw and winner_style != challenger_style and
            winner_style != challengee_style):
             return False
 
@@ -104,11 +111,15 @@ class TicTacToeView(miru.View):
 
         # Report game over
         message = ctx.message.content
-        new_mention = f'{ctx.user.mention} is the winner!'
+        if draw:
+            new_final_line = 'The game was a draw.'
+        else:
+            new_final_line = f'{ctx.user.mention} is the winner!'
         updated_message = re.sub(r"It is currently <@\d+>'s turn.",
-                                 new_mention, message, 1)
+                                 new_final_line, message, 1)
         await ctx.edit_response(updated_message, components=self)
         self.stop()
+        return True
 
     async def view_check(self, ctx: miru.ViewContext) -> bool:
         """Before calling button methods check if presser is current player."""
@@ -131,12 +142,18 @@ class TicTacToeButton(miru.Button):
         """Respond to button presses by restyling the button."""
         # Prepare changes to button
         if ctx.user.username == self.view.challenger.username:
-            self.style = challengee_style
+            self.style = challenger_style
             self.view.current_player = self.view.challengee
         else:
-            self.style = challenger_style
+            self.style = challengee_style
             self.view.current_player = self.view.challenger
         self.disabled = True
+
+        # Check for winner, this must be after button changes so that the most
+        # recent button press counts and is shown on the grid
+        game_over = await self.view.determine_winner(ctx)
+        if game_over:
+            return
 
         # Prepare modified message with new current player mention
         message = ctx.message.content
@@ -146,11 +163,6 @@ class TicTacToeButton(miru.Button):
         # Update game message
         await ctx.edit_response(updated_message, components=self.view)
 
-        # Check for winner, this must be after button changes so that the most
-        # recent button press counts and is shown on the grid
-        game_over = await self.view.determine_winner(ctx)
-        if game_over:
-            return
 
 
 @plugin.include
