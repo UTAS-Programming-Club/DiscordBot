@@ -82,8 +82,6 @@ class RPSView(miru.View):
     challengee: hikari.User
     challenger_pick: Optional[RPSPick] = None
     challengee_pick: Optional[RPSPick] = None
-    er_pick = 0
-    ee_pick = 0
 
     message_emojis = ['\N{ROCK}', '\N{SCROLL}', '\N{BLACK SCISSORS}']
 
@@ -91,30 +89,25 @@ class RPSView(miru.View):
         """Determine if the game has finished and if so who won."""
         if self.challenger_pick is None or self.challengee_pick is None:
             return
-        self.er_pick = ((self.challenger_pick.value) % 3)
-        self.ee_pick = ((self.challengee_pick.value) %3)
+        er_pick = self.challenger_pick.value
+        ee_pick = self.challengee_pick.value
         
-        if self.er_pick == self.ee_pick:
+        if er_pick == ee_pick:
             await ctx.edit_response('It was a tie!')
-        # rock = 0, paper = 1, scissors = 2
-        elif ((
-            self.er_pick == 1 and self.ee_pick == 0
-          ) or (
-            self.er_pick == 0 and self.ee_pick == 2
-          ) or (
-            self.er_pick == 2 and self.ee_pick == 1
-        )):
+        elif (
+            ((er_pick-1)%3) == ee_pick
+        ):
             await ctx.edit_response(
-              f'{self.message_emojis[self.er_pick]} '
-              f'>>> {self.message_emojis[self.ee_pick]}\n'
+              f'{self.message_emojis[er_pick]} '
+              f'>>> {self.message_emojis[ee_pick]}\n'
               f'{self.challenger_pick.name} beats '
               f'{self.challengee_pick.name.lower()}, '
               f'{self.challenger.mention} wins!'
             )
         else:
             await ctx.edit_response(
-              f'{self.message_emojis[self.ee_pick]} '
-              f'>>> {self.message_emojis[self.er_pick]}\n'
+              f'{self.message_emojis[ee_pick]} '
+              f'>>> {self.message_emojis[er_pick]}\n'
               f'{self.challengee_pick.name} beats '
               f'{self.challenger_pick.name.lower()}, '
               f'{self.challengee.mention} wins!'
