@@ -54,9 +54,9 @@ plugin = crescent.Plugin[hikari.GatewayBot, BotData]()
 class RPSPick(Enum):
     """Enum to store each user's rock paper scissors selection."""
 
-    Rock     = 1
-    Paper    = 2
-    Scissors = 3
+    Rock     = 0
+    Paper    = 1
+    Scissors = 2
 
 
 class RPSView(miru.View):
@@ -73,29 +73,25 @@ class RPSView(miru.View):
         """Determine if the game has finished and if so who won."""
         if self.challenger_pick is None or self.challengee_pick is None:
             return
-        if self.challenger_pick == self.challengee_pick:
+        er_pick = self.challenger_pick.value
+        ee_pick = self.challengee_pick.value
+        
+        if er_pick == ee_pick:
             await ctx.edit_response('It was a tie!')
-        elif ((
-           self.challenger_pick is RPSPick.Paper and
-           self.challengee_pick is RPSPick.Rock
-          ) or (
-           self.challenger_pick is RPSPick.Scissors and
-           self.challengee_pick is RPSPick.Paper
-          ) or (
-           self.challenger_pick is RPSPick.Rock and
-           self.challengee_pick is RPSPick.Scissors
-        )):
+        elif (
+            ((er_pick-1)%3) == ee_pick
+        ):
             await ctx.edit_response(
-              f'{self.message_emojis[self.challenger_pick.value - 1]} '
-              f'>> {self.message_emojis[self.challengee_pick.value - 1]}\n'
+              f'{self.message_emojis[er_pick]} '
+              f'>>> {self.message_emojis[ee_pick]}\n'
               f'{self.challenger_pick.name} beats '
               f'{self.challengee_pick.name.lower()}, '
               f'{self.challenger.mention} wins!'
             )
         else:
             await ctx.edit_response(
-              f'{self.message_emojis[self.challengee_pick.value - 1]} '
-              f'>> {self.message_emojis[self.challenger_pick.value - 1]}\n'
+              f'{self.message_emojis[ee_pick]} '
+              f'>>> {self.message_emojis[er_pick]}\n'
               f'{self.challengee_pick.name} beats '
               f'{self.challenger_pick.name.lower()}, '
               f'{self.challengee.mention} wins!'
