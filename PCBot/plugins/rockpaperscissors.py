@@ -14,6 +14,9 @@ from typing import Optional
 # TODO: Report timeout
 # TODO: Disable buttons visibly after the round is over or timeout has occurred
 # TODO: Convert to user command or at least offer that option
+# TODO: Fully replace text beats with emoji? Can just be one line again then
+# TODO: Disable buttons on timeout
+# TODO: Disable buttons when the bot shuts down, does reload also break views?
 
 plugin = crescent.Plugin[hikari.GatewayBot, BotData]()
 
@@ -59,6 +62,9 @@ class RPSPick(Enum):
     Scissors = 2
 
 
+rps_emojis = ['\N{ROCK}', '\N{SCROLL}', '\N{BLACK SCISSORS}']
+
+
 class RPSView(miru.View):
     """Miri view with buttons to obtain each user's selection."""
 
@@ -67,38 +73,40 @@ class RPSView(miru.View):
     challenger_pick: Optional[RPSPick] = None
     challengee_pick: Optional[RPSPick] = None
 
-    message_emojis = ['\N{ROCK}', '\N{SCROLL}', '\N{BLACK SCISSORS}']
-
     async def determine_winner(self, ctx: miru.ViewContext) -> None:
         """Determine if the game has finished and if so who won."""
         if self.challenger_pick is None or self.challengee_pick is None:
             return
         er_pick = self.challenger_pick.value
         ee_pick = self.challengee_pick.value
-        
+
+        # Disable interaction
+        for child in self.children:
+            child.disabled = True
+
+        # Report game over
         if er_pick == ee_pick:
             await ctx.edit_response('It was a tie!')
-        elif (
-            ((er_pick-1)%3) == ee_pick
-        ):
+        elif (er_pick - 1) % 3 == ee_pick:
             await ctx.edit_response(
-              f'{self.message_emojis[er_pick]} '
-              f'>>> {self.message_emojis[ee_pick]}\n'
+              f'{rps_emojis[er_pick]} >>> {rps_emojis[ee_pick]}\n'
               f'{self.challenger_pick.name} beats '
               f'{self.challengee_pick.name.lower()}, '
-              f'{self.challenger.mention} wins!'
+              f'{self.challenger.mention} wins!',
+              components=self
             )
         else:
             await ctx.edit_response(
-              f'{self.message_emojis[ee_pick]} '
-              f'>>> {self.message_emojis[er_pick]}\n'
+              f'{rps_emojis[ee_pick]} >>> {rps_emojis[er_pick]}\n'
               f'{self.challengee_pick.name} beats '
               f'{self.challenger_pick.name.lower()}, '
-              f'{self.challengee.mention} wins!'
+              f'{self.challengee.mention} wins!',
+              components=self
             )
+
         self.stop()
 
-    @miru.button(label='Rock', emoji='\N{ROCK}',
+    @miru.button(label='Rock', emoji=rps_emojis[RPSPick.Rock.value],
                  style=hikari.ButtonStyle.PRIMARY)
     async def rock_button(self, ctx: miru.ViewContext,
                           button: miru.Button) -> None:
@@ -109,7 +117,7 @@ class RPSView(miru.View):
             self.challengee_pick = RPSPick.Rock
         await self.determine_winner(ctx)
 
-    @miru.button(label='Paper', emoji='\N{SCROLL}',
+    @miru.button(label='Paper', emoji=rps_emojis[RPSPick.Paper.value],
                  style=hikari.ButtonStyle.PRIMARY)
     async def paper_button(self, ctx: miru.ViewContext,
                            button: miru.Button) -> None:
@@ -120,7 +128,7 @@ class RPSView(miru.View):
             self.challengee_pick = RPSPick.Paper
         await self.determine_winner(ctx)
 
-    @miru.button(label='Scissors', emoji='\N{BLACK SCISSORS}',
+    @miru.button(label='Scissors', emoji=rps_emojis[RPSPick.Scissors.value],
                  style=hikari.ButtonStyle.PRIMARY)
     async def scissors_button(self, ctx: miru.ViewContext,
                               button: miru.Button) -> None:
