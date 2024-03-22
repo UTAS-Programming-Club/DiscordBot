@@ -43,17 +43,17 @@ if __name__ == '__main__':
     # restarting the bot and then messing around with discord to run a command
 
     # help_public = True
-    # Test basic help
+    # Test basic help command
     # mock_command(crescent_client, 'PCBot.plugins.help', 0, options={
     #   'public': help_public
     # })
 
-    # Test command help
+    # Test command help command
     # mock_command(crescent_client, 'PCBot.plugins.help', 0, options={
     #    'public': help_public, 'command': 'rpschallenge'
     # })
 
-    # Reload command
+    # Test reload command
     # Cannot reregister as crescent.internal.registry.register_commands does
     # not work without the bot running
     # reload_list_plugins = True
@@ -61,6 +61,7 @@ if __name__ == '__main__':
     #     'list_plugins': reload_list_plugins, 'reregister': False
     # })
 
+    # Test rpschallenge
     # Only gets as far as reponding with components as MockContext does not
     # (yet?) support components
     # mock_command(crescent_client, 'PCBot.plugins.rockpaperscissors', 0,
