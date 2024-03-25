@@ -31,19 +31,17 @@ class MineSweeperView(miru.View):
     grid_size: int
     bomb_num: int
     
-    grid = [ [Tile(0)]*1 for i in range(1)]
     message = ''
+    grid = None
     
     def __init__(self, grid_size: int, bomb_num) -> None:
         super().__init__()
         self.grid_size = grid_size
         self.bomb_num = bomb_num
+        self.grid = [ [Tile(0)]*grid_size for i in range(grid_size)]
+        self.setup()
         
-    
-    async def make_move(self, ctx: miru.ViewContext) -> None:
-        self.grid = [ [Tile(0)]*self.grid_size for i in range(self.grid_size)]
-        self.message = ''
-        
+    def setup(self) -> None:
         """ randomly scatters bombs in the grid """
         for bomb in range(self.bomb_num):
             x = (int)(random.random() * self.grid_size)
@@ -56,46 +54,41 @@ class MineSweeperView(miru.View):
                     y = (int)(random.random() * self.grid_size)
                 self.grid[x][y].tileID = 10
             # this is ugly I'm just lazy and couldn't think of a better way but it porbably works
-            try:
-                if(self.grid[x+1][y].tileID < 8):
-                    self.grid[x+1][y].tileID += 1
-            except:
-                print('out of bounds')
-            try:
-                if(self.grid[x+1][y-1].tileID < 8):
-                    self.grid[x+1][y-1].tileID += 1
-            except:
-                print('out of bounds')
-            try:
-                if(self.grid[x+1][y+1].tileID < 8):
-                    self.grid[x+1][y+1].tileID += 1
-            except:
-                print('out of bounds')
-            try:
-                if(self.grid[x-1][y-1].tileID < 8):
-                    self.grid[x-1][y-1].tileID += 1
-            except:
-                print('out of bounds')
-            try:
-                if(self.grid[x-1][y+1].tileID < 8):
-                    self.grid[x-1][y+1].tileID += 1
-            except:
-                print('out of bounds')
-            try:
+            xUpper = (bool)(x-1 > -1)
+            xLower = (bool)(x+1 < self.grid_size)
+            yUpper = (bool)(y-1 > -1)
+            yLower = (bool)(y+1 < self.grid_size)
+            
+            if(xUpper):
                 if(self.grid[x-1][y].tileID < 8):
                     self.grid[x-1][y].tileID += 1
-            except:
-                print('out of bounds')
-            try:
-                if(self.grid[x][y+1].tileID < 8):
-                    self.grid[x][y+1].tileID += 1
-            except:
-                print('out of bounds')
-            try:
+                if(yUpper):
+                    if(self.grid[x-1][y-1].tileID < 8):
+                        self.grid[x-1][y-1].tileID += 1
+                if(yLower):
+                    if(self.grid[x-1][y+1].tileID < 8):
+                        self.grid[x-1][y+1].tileID += 1
+            if(xLower):
+                if(self.grid[x+1][y].tileID < 8):
+                    self.grid[x+1][y].tileID += 1
+                if(yUpper):
+                    if(self.grid[x+1][y-1].tileID < 8):
+                        self.grid[x+1][y-1].tileID += 1
+                if(yLower):
+                    if(self.grid[x+1][y+1].tileID < 8):
+                        self.grid[x+1][y+1].tileID += 1
+                        
+            if(yUpper):
                 if(self.grid[x][y-1].tileID < 8): 
                     self.grid[x][y-1].tileID += 1
-            except:
-                print('out of bounds')
+            
+            if(yLower):
+                if(self.grid[x][y+1].tileID < 8):
+                    self.grid[x][y+1].tileID += 1
+    
+    async def make_move(self, ctx: miru.ViewContext) -> None:
+        self.message = ''
+
         """ draws up the board by editing the message """
         for i in range(self.grid_size):
             self.message += '\n'
@@ -132,7 +125,7 @@ class MineSweeperCommand:
     """
 
     selected_grid_size = crescent.option(int, default = 9, min_value=2, max_value=18)
-    selected_bomb_num = crescent.option(int, default = 18, min_value=1, max_value=80)
+    selected_bomb_num = crescent.option(int, default = 5, min_value=1, max_value=80)
 
 
     async def callback(self, ctx: crescent.Context) -> None:
