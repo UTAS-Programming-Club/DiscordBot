@@ -5,7 +5,6 @@ import crescent
 import hikari
 import miru
 from crescent.ext import docstrings
-from enum import Enum
 from PCBot.botdata import BotData
 from typing import Optional
 
@@ -23,22 +22,30 @@ class Tile:
 
 
 tile_emojis = ['\N{LARGE YELLOW SQUARE}', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '\N{LARGE GREEN SQUARE}', '\N{BOMB}']
-
+grid_message_callbacks = []
 
 class MineSweeperView(miru.View):
-    """Miri view with buttons to obtain each user's selection."""
+    """Miru view with button to draw up grid"""
     
     grid_size: int
     bomb_num: int
     
-    message = ''
+    grid_message = ''
     grid = None
     
     def __init__(self, grid_size: int, bomb_num) -> None:
         super().__init__()
         self.grid_size = grid_size
         self.bomb_num = bomb_num
-        self.grid = [ [Tile(0)]*grid_size for i in range(grid_size)]
+        
+        self.grid: list[list[Tile]] = []
+        for i in range(grid_size):
+            row: list[Tile] = []
+            for j in range(grid_size):
+                    row.append(Tile(0))
+            self.grid.append(row)
+        
+        grid_message_callbacks.append(self.on_grid_message_create)
         self.setup()
         
     def setup(self) -> None:
@@ -85,27 +92,72 @@ class MineSweeperView(miru.View):
             if(yLower):
                 if(self.grid[x][y+1].tileID < 8):
                     self.grid[x][y+1].tileID += 1
+                    
+    def make_move(self, col: int, row: int, flag: bool = False) -> None:
+        self.grid[col][row].uncovered = True
     
-    async def make_move(self, ctx: miru.ViewContext) -> None:
-        self.message = ''
+    async def redraw_grid(self, ctx: miru.ViewContext) -> None:
+        self.grid_message = ''
 
-        """ draws up the board by editing the message """
+        """ draws up the board by editing the grid_message """
         for i in range(self.grid_size):
-            self.message += '\n'
+            self.grid_message += '\n'
             for j in range(self.grid_size):
                 # add tile_emojis[tile.tileID] to string
                 if(self.grid[i][j].uncovered == False):
-                    self.message += f'{tile_emojis[9]}'
+                    self.grid_message += f'{tile_emojis[9]}'
                 else:
-                    self.message += f'{tile_emojis[self.grid[i][j].tileID]}'
-        await ctx.edit_response(f'{self.message}')
-    
+                    self.grid_message += f'{tile_emojis[self.grid[i][j].tileID]}'
+        await ctx.edit_response(f'{self.grid_message}')
     
     @miru.button(label='Start', emoji=tile_emojis[10],
                  style=hikari.ButtonStyle.PRIMARY)
     async def rock_button(self, ctx: miru.ViewContext,
                           button: miru.Button) -> None:
-        await self.make_move(ctx)
+        self.disable = True
+        await self.redraw_grid(ctx)
+        
+    @miru.button(label='Redraw', emoji=tile_emojis[10],
+                 style=hikari.ButtonStyle.PRIMARY)
+    async def rock_button2(self, ctx: miru.ViewContext,
+                          button: miru.Button) -> None:
+        await self.redraw_grid(ctx)
+
+    async def on_grid_message_create(self, event: hikari.MessageCreateEvent):
+        if self.is_bound == False:
+            return
+        if (event.message.referenced_message.id != 
+            self.message.id):
+            return
+        user_input = event.message.content.casefold().split()
+        
+        print(event.message.content)
+        print(user_input)
+        if(len(user_input) == 2):
+            if user_input[0] < 'a' or user_input[0] > 'z':
+                return
+            col_move = ord(user_input[0]) - ord('a')
+            
+            # TODO: check if user input is an int then convert it to int
+            if user_input[1] < "0" or user_input[1] > str(self.grid_size - 1):
+                return
+            row_move = user_input[1]
+        elif(len(user_input) == 3):
+            return
+        else:
+            await event.message.respond("That isn't a valid move!")
+            return
+
+        self.make_move(col_move, int(row_move))
+
+@plugin.include
+@crescent.event
+async def on_grid_message_create(event: hikari.MessageCreateEvent):
+    if event.message.referenced_message is None:
+        return
+    
+    for callback in grid_message_callbacks:
+        await callback(event)
 
 
 @plugin.include
