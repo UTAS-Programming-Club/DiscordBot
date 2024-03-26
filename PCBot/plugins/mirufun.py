@@ -10,19 +10,22 @@ plugin = crescent.Plugin[hikari.GatewayBot, None]()
 
 grid_size = 10
 
-class NumberScreen(menu.Screen):
+class SelectionScreen(menu.Screen):
     flag: bool
-    letter: chr
+    letter: Optional[chr] = None
 
-    def __init__(self, menu: menu.Menu, flag: bool, letter: chr) -> None:
+    def __init__(self, menu: menu.Menu, flag: bool,
+                 letter: Optional[chr] = None) -> None:
           super().__init__(menu)
           self.flag = flag
           self.letter = letter
   
     async def build_content(self) -> menu.ScreenContent:
+        prediction_type = 'flag' if self.flag else 'clear'
+        selection_type = 'column' if self.letter is None else 'row'
         return menu.ScreenContent(
             embed=hikari.Embed(
-              title=f'Select row for {"flag" if self.flag else "clear"}',
+                title=f'Select {selection_type} for {prediction_type}'
             ),
         )
     
@@ -49,34 +52,13 @@ class NumberButton(menu.ScreenButton):
         await menu.pop_until_root()
 
 def create_number_screen(miru_menu: menu.Menu, flag: bool, letter: chr) -> menu.Screen:
-    number_screen = NumberScreen(miru_menu, flag, letter)
+    number_screen = SelectionScreen(miru_menu, flag, letter)
     back_button = number_screen.get_item_by_id('back')
     number_screen.remove_item(back_button)
     for i in range(grid_size):
         number_screen.add_item(NumberButton(i))
     number_screen.add_item(back_button)
     return number_screen
-
-
-class LetterScreen(menu.Screen):
-    flag: bool
-
-    def __init__(self, menu: menu.Menu, flag: bool) -> None:
-          super().__init__(menu)
-          self.flag = flag
-  
-    async def build_content(self) -> menu.ScreenContent:
-        return menu.ScreenContent(
-            embed=hikari.Embed(
-              title=f'Select column for {"flag" if self.flag else "clear"}',
-            ),
-        )
-    
-    @menu.button(label='Back', custom_id='back',
-                 style=hikari.ButtonStyle.SECONDARY)
-    async def back(self, ctx: miru.ViewContext,
-                   button: menu.ScreenButton) -> None:
-        await self.menu.pop()
 
 class LetterButton(menu.ScreenButton):
     letter: chr
@@ -92,7 +74,7 @@ class LetterButton(menu.ScreenButton):
         await self.menu.push(create_number_screen(self.menu, self.screen.flag, self.letter))
 
 def create_letter_screen(miru_menu: menu.Menu, flag: bool) -> menu.Screen:
-    letter_screen = LetterScreen(miru_menu, flag)
+    letter_screen = SelectionScreen(miru_menu, flag)
     back_button = letter_screen.get_item_by_id('back')
     letter_screen.remove_item(back_button)
     for i in range(grid_size):
