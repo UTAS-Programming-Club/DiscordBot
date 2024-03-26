@@ -146,6 +146,7 @@ class MiruFunCommand:
         """Handle mirufun command being run by showing prediction menu."""
         prediction_menu = menu.Menu()
         screen = PredictionScreen(prediction_menu)
-        builder = await menu.build_response_async(plugin.model.miru, screen)
+        builder =\
+          await prediction_menu.build_response_async(plugin.model.miru, screen)
         await ctx.respond_with_builder(builder)
         plugin.model.miru.start_view(prediction_menu)
