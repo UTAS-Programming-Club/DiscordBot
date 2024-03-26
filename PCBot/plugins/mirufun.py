@@ -1,3 +1,5 @@
+"""This module contains the bot's miru menu experimentation command."""
+
 import crescent
 import hikari
 import miru
@@ -10,17 +12,22 @@ plugin = crescent.Plugin[hikari.GatewayBot, None]()
 
 grid_size = 10
 
+
 class SelectionScreen(menu.Screen):
+    """Miru screen which asks the user for a letter or number selction."""
+
     flag: bool
     letter: Optional[chr] = None
 
     def __init__(self, menu: menu.Menu, flag: bool,
                  letter: Optional[chr] = None) -> None:
-          super().__init__(menu)
-          self.flag = flag
-          self.letter = letter
-  
+        """Create an internal screen and store parameters for later use."""
+        super().__init__(menu)
+        self.flag = flag
+        self.letter = letter
+
     async def build_content(self) -> menu.ScreenContent:
+        """Create a visible screen using stored properties."""
         prediction_type = 'flag' if self.flag else 'clear'
         selection_type = 'column' if self.letter is None else 'row'
         return menu.ScreenContent(
@@ -28,14 +35,18 @@ class SelectionScreen(menu.Screen):
                 title=f'Select {selection_type} for {prediction_type}'
             ),
         )
-    
+
     @menu.button(label='Back', custom_id='back',
                  style=hikari.ButtonStyle.SECONDARY)
     async def back(self, ctx: miru.ViewContext,
                    button: menu.ScreenButton) -> None:
+        """Miru button to restore the previous screen."""
         await self.menu.pop()
 
+
 class NumberButton(menu.ScreenButton):
+    """Miru screen button that displays a provided number."""
+
     number: int
 
     def __init__(self, number: int) -> None:
@@ -46,12 +57,16 @@ class NumberButton(menu.ScreenButton):
         )
 
     async def callback(self, ctx: miru.ViewContext) -> None:
+        """Handle user pressing button by showing root with selected cell."""
         menu = self.menu
         menu._stack[0].previous_selection =\
           f'{self.screen.letter}{self.number + 1}'
         await menu.pop_until_root()
 
-def create_number_screen(miru_menu: menu.Menu, flag: bool, letter: chr) -> menu.Screen:
+
+def create_number_screen(miru_menu: menu.Menu, flag: bool,
+                         letter: chr) -> menu.Screen:
+    """Create a SelectionScreen set up to take a number from the user."""
     number_screen = SelectionScreen(miru_menu, flag, letter)
     back_button = number_screen.get_item_by_id('back')
     number_screen.remove_item(back_button)
@@ -60,7 +75,10 @@ def create_number_screen(miru_menu: menu.Menu, flag: bool, letter: chr) -> menu.
     number_screen.add_item(back_button)
     return number_screen
 
+
 class LetterButton(menu.ScreenButton):
+    """Miru screen button that displays a provided letter."""
+
     letter: chr
 
     def __init__(self, letter_number: int) -> None:
@@ -71,9 +89,14 @@ class LetterButton(menu.ScreenButton):
         )
 
     async def callback(self, ctx: miru.ViewContext) -> None:
-        await self.menu.push(create_number_screen(self.menu, self.screen.flag, self.letter))
+        """Handle user pressing button by showing number selection screen."""
+        number_screen = create_number_screen(self.menu, self.screen.flag,
+                                             self.letter)
+        await self.menu.push(number_screen)
+
 
 def create_letter_screen(miru_menu: menu.Menu, flag: bool) -> menu.Screen:
+    """Create a SelectionScreen set up to take a letter from the user."""
     letter_screen = SelectionScreen(miru_menu, flag)
     back_button = letter_screen.get_item_by_id('back')
     letter_screen.remove_item(back_button)
@@ -84,63 +107,45 @@ def create_letter_screen(miru_menu: menu.Menu, flag: bool) -> menu.Screen:
 
 
 class PredictionScreen(menu.Screen):
+    """Miru screen to asks the user what minesweeper prediction to make."""
+
     previous_selection: Optional[str] = None
 
     async def build_content(self) -> menu.ScreenContent:
+        """Create a visible screen to show prediction option buttons."""
         embed = hikari.Embed(title='Start Prediction')
         if self.previous_selection is not None:
-            embed.description = f'Previous prediction was {self.previous_selection}'
+            embed.description =\
+              f'Previous prediction was {self.previous_selection}'
         return menu.ScreenContent(embed=embed)
 
     @menu.button(label="Bomb")
     async def bomb(self, ctx: miru.ViewContext,
                    button: menu.ScreenButton) -> None:
+        """Miru button to make a bomb prediction."""
         await self.menu.push(create_letter_screen(self.menu, True))
 
     @menu.button(label="Not Bomb")
     async def not_bomb(self, ctx: miru.ViewContext,
-                   button: menu.ScreenButton) -> None:
+                       button: menu.ScreenButton) -> None:
+        """Miru button to make a no bomb prediction."""
         await self.menu.push(create_letter_screen(self.menu, False))
+
 
 @plugin.include
 @crescent.command(name='mirufun')
-class SomeSlashCommand:
-    async def callback(self, ctx: crescent.Context) -> None:
-        my_menu = menu.Menu() # Create a new Menu
-        screen = PredictionScreen(my_menu)
-        
-        # Pass in the initial screen
-        builder = await my_menu.build_response_async(plugin.model.miru, screen)
-        await ctx.respond_with_builder(builder)
-        plugin.model.miru.start_view(my_menu)
+class MiruFunCommand:
+    """
+    Test command to try out miru menus.
 
-#@plugin.include
-#@crescent.command(name='mirufun')
-#class SomeSlashCommand:
-#    async def callback(self, ctx: crescent.Context) -> None:
-#        page1 = nav.Page(
-#           content='test'
-#        )
-#        
-#        page2 = nav.Page(
-#           content='test'
-#        )
-#        
-#        # The list of pages this navigator should paginate through
-#        # This should be a list that contains
-#        # 'str', 'hikari.Embed', or 'nav.Page' objects.
-#        pages = [page1, page2]
-#
-#        # Define our navigator and pass in our list of pages
-#        navigator = nav.NavigatorView(pages=pages)
-#
-#
-#        for i in range(20):
-#          print(i)
-#          navigator.add_item(nav.NavButton(
-#            label=f'test {i}'
-#          ))
-#
-#        builder = await navigator.build_response_async(plugin.model.miru)
-#        await ctx.respond_with_builder(builder)
-#        plugin.model.miru.start_view(navigator)
+    Requested by something sensible(somethingsensible).
+    Implemented by something sensible(somethingsensible).
+    """
+
+    async def callback(self, ctx: crescent.Context) -> None:
+        """Handle mirufun command being run by showing prediction menu."""
+        prediction_menu = menu.Menu()
+        screen = PredictionScreen(prediction_menu)
+        builder = await menu.build_response_async(plugin.model.miru, screen)
+        await ctx.respond_with_builder(builder)
+        plugin.model.miru.start_view(prediction_menu)
