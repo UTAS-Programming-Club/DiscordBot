@@ -33,6 +33,8 @@ class MineSweeperView(miru.View):
     grid_message = ''
     grid = None
     
+    game_over = False
+    
     def __init__(self, grid_size: int, bomb_num) -> None:
         super().__init__()
         self.grid_size = grid_size
@@ -93,9 +95,19 @@ class MineSweeperView(miru.View):
                 if(self.grid[x][y+1].tileID < 8):
                     self.grid[x][y+1].tileID += 1
                     
-    def make_move(self, col: int, row: int, flag: bool = False) -> None:
+    def make_move(self, col: int, row: int, flag: bool = False) -> str:
+        if(self.game_over == True):
+            return
+        
         self.grid[col][row].uncovered = True
-    
+        if(self.grid[col][row].tileID == 10):
+            self.game_over = True
+            return 'Game Over!' # feedback for player such as 'revealing x,y'
+        else:
+            return f'Revealing tile {col}, {row}' # game over message/some kind of response
+            
+        # simply call redraw except we can't rn
+        
     async def redraw_grid(self, ctx: miru.ViewContext) -> None:
         self.grid_message = ''
 
@@ -112,15 +124,18 @@ class MineSweeperView(miru.View):
     
     @miru.button(label='Start', emoji=tile_emojis[10],
                  style=hikari.ButtonStyle.PRIMARY)
-    async def rock_button(self, ctx: miru.ViewContext,
+    async def start_button(self, ctx: miru.ViewContext,
                           button: miru.Button) -> None:
-        self.disable = True
+        self.disabled = True
         await self.redraw_grid(ctx)
         
     @miru.button(label='Redraw', emoji=tile_emojis[10],
                  style=hikari.ButtonStyle.PRIMARY)
-    async def rock_button2(self, ctx: miru.ViewContext,
+    async def redraw_button(self, ctx: miru.ViewContext,
                           button: miru.Button) -> None:
+        if(self.game_over == True):
+            self.disabled = True
+        
         await self.redraw_grid(ctx)
 
     async def on_grid_message_create(self, event: hikari.MessageCreateEvent):
@@ -135,20 +150,23 @@ class MineSweeperView(miru.View):
         print(user_input)
         if(len(user_input) == 2):
             if user_input[0] < 'a' or user_input[0] > 'z':
+                await event.message.respond("That isn't a valid move!")
                 return
             col_move = ord(user_input[0]) - ord('a')
             
             # TODO: check if user input is an int then convert it to int
             if user_input[1] < "0" or user_input[1] > str(self.grid_size - 1):
+                await event.message.respond("That isn't a valid move!")
                 return
             row_move = user_input[1]
         elif(len(user_input) == 3):
+            await event.message.respond("That isn't a valid move!")
             return
         else:
             await event.message.respond("That isn't a valid move!")
             return
 
-        self.make_move(col_move, int(row_move))
+        await event.message.respond(self.make_move(col_move, int(row_move)))
 
 @plugin.include
 @crescent.event
