@@ -33,6 +33,7 @@ def get_plugin_info(plugin_manager: crescent.PluginManager)\
     for plugin_name, plugin in plugin_manager.plugins.items():
         loaded_commands[plugin_name] = tuple([
             child.metadata for child in plugin._children
+            if type(child.metadata) == crescent.internal.AppCommandMeta
         ])
     return loaded_commands
 
