@@ -144,7 +144,8 @@ class TicTacToeView(miru.View):
 
     async def view_check(self, ctx: miru.ViewContext) -> bool:
         """Before calling button methods check if presser is current player."""
-        return ctx.user.username == self.players[self.current_player.value].username
+        current_player = self.players[self.current_player.value]
+        return ctx.user.username == current_player.username
 
 
 class TicTacToeButton(miru.Button):

@@ -16,7 +16,7 @@ token_path = './secrets/token'
 guild_id_path = './secrets/guild'
 
 
-def get_token_file_path(file: str) -> None:
+def get_token_file_path(file: str) -> str:
     """Append .txt to file path if that file exists.
 
        Makes it easier to setup the bot on windows.
