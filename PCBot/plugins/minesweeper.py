@@ -29,7 +29,6 @@ class GridInfo:
     menu: menu.Menu
     prediction_screen: menu.Screen
 
-
 tile_emojis = ['\N{LARGE YELLOW SQUARE}', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '\N{LARGE GREEN SQUARE}', '💥', '🚩']
 grids: dict[hikari.snowflakes.Snowflake, GridInfo] = {}
 
@@ -93,11 +92,15 @@ def setup_grid(bomb_num: int, grid: list[list[Tile]]) -> None:
 
 async def redraw_grid(grid: list[list[Tile]]) -> str:
     """Draws up the board by editing the grid_message."""
-    grid_message = ''
     grid_size = len(grid)
-
+    grid_message_spacing = '   '* int(grid_size/2)
+    grid_message = f'.{grid_message_spacing}--------------------\n.{grid_message_spacing}    MINESWEEPER\n.{grid_message_spacing}--------------------\n.    '
+    
+    for h in range(grid_size):
+        grid_message += chr(h + ord('A')) + '   '
+    
     for i in range(grid_size):
-        grid_message += '\n'
+        grid_message += f'\n{i+1}  '
         for j in range(grid_size):
             # add tile_emojis[tile.tileID] to string
             if grid[i][j].flagged:
@@ -108,8 +111,8 @@ async def redraw_grid(grid: list[list[Tile]]) -> str:
                 grid_message += f'{tile_emojis[grid[i][j].tileID]}'
     return grid_message
 
-
-def update_cell(col: int, row: int, grid: list[list[Tile]], flag: bool, uncover: bool) -> None:
+# swapped around
+def update_cell(row: int, col: int, grid: list[list[Tile]], flag: bool, uncover: bool) -> None:
     # Row and col must both be in [0, len(grid))
     if 0 > col >= len(grid) or 0 > row >= len(grid):
         return
@@ -130,6 +133,14 @@ def update_cell(col: int, row: int, grid: list[list[Tile]], flag: bool, uncover:
     if flag:
         grid[col][row].flagged = not grid[col][row].flagged
 
+def check_win(grid: list[list[Tile]) -> None:
+    grid_size = len(grid)
+    bomb_num = 0
+    
+    for i in range(grid_size):
+        for j in range(grid_size):
+            if grid[i][j].flagged and grid[i][j]
+            
 
 class SelectionScreen(menu.Screen):
     """Miru screen which asks the user for a letter or number selction."""
@@ -327,15 +338,15 @@ async def on_grid_message_create(event: hikari.MessageCreateEvent):
         col_move = ord(user_input[0]) - ord('a')
         
         # TODO: check if user input is an int then convert it to int
-        if user_input[1] < "0" or user_input[1] > str(grid_size - 1):
+        if user_input[1] < "0" or user_input[1] > str(grid_size):
             return
         row_move = user_input[1]
     else:
         await event.message.respond("That isn't a valid move!")
         return
 
-
-    update_cell(col_move, int(row_move), grid_info.grid, flag, not flag)
+    # wasn't correct
+    update_cell(col_move, int(row_move)-1, grid_info.grid, flag, not flag)
     letter = chr(col_move + ord('A'))
     await grid_info.menu.current_screen.update_reply_prediction(f'{letter}{row_move}')
     grid_str = await redraw_grid(grid_info.grid)
@@ -361,7 +372,7 @@ class MineSweeperCommand:
     """
 
     selected_grid_size = crescent.option(int, default = 9, min_value=2, max_value=18)
-    selected_bomb_num = crescent.option(int, default = 5, min_value=1, max_value=80)
+    selected_bomb_num = crescent.option(int, default = 8, min_value=1, max_value=80)
 
     async def callback(self, ctx: crescent.Context) -> None:
         """Handle rpschallenge command being run by showing button view."""
