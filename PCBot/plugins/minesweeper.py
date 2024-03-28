@@ -6,18 +6,22 @@ import crescent
 import hikari
 import miru
 import random
+import string
 from crescent.ext import docstrings
+from enum import Enum
 from PCBot.botdata import BotData
 from typing import Awaitable, Callable
 
 # TODO: Support grid sizes larger than 9x9, limited by reply input method
 # TODO: Readd reply input method
-# TODO: Add sections 2(column selection) and 3(row selection) of view
+# TODO: Finish button input method
 # TODO: Replace tile_emojis with an Enum
 # TODO: Add grid row and column labels
 # TODO: Indicate that bomb count is capped at grid size * grid size
 # TODO: Only generate bombs after first prediction,
 #       then max box count is one lower
+# TODO: Add description text
+# TODO: Add last selection text and mention method
 
 plugin = crescent.Plugin[hikari.GatewayBot, BotData]()
 tile_emojis = ['\N{LARGE YELLOW SQUARE}', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '\N{LARGE GREEN SQUARE}', '💥', '🚩']
@@ -32,40 +36,40 @@ class Tile:
     flagged = False
 
 
-class Grid():
+class Grid:
     """Class to store information about the grid."""
 
-    grid_size: int
+    size: int
     bomb_count: int
     grid: list[list[Tile]]
 
-    def __init__(self, grid_size: int, bomb_count: int) -> None:
+    def __init__(self, size: int, bomb_count: int) -> None:
         """Generate empty grid."""
-        self.grid_size = grid_size
+        self.size = size
         self.bomb_count = bomb_count
 
         self.grid = [
-            [Tile(0) for i in range(self.grid_size)]
-            for j in range(self.grid_size)
+            [Tile() for i in range(self.size)]
+            for j in range(self.size)
         ]
 
     def setup_bombs(self) -> None:
-        """Randomly scatters bombs in the self.grid."""
+        """Randomly scatters bombs in the grid."""
         for bomb in range(self.bomb_count):
-            x = (int)(random.random() * self.grid_size)
-            y = (int)(random.random() * self.grid_size)
+            x = (int)(random.random() * self.size)
+            y = (int)(random.random() * self.size)
             if(self.grid[x][y].tile_id != 10):
                 self.grid[x][y].tile_id = 10
             else:
                 while(self.grid[x][y].tile_id == 10):
-                    x = (int)(random.random() * self.grid_size)
-                    y = (int)(random.random() * self.grid_size)
+                    x = (int)(random.random() * self.size)
+                    y = (int)(random.random() * self.size)
                 self.grid[x][y].tile_id = 10
             # this is ugly I'm just lazy and couldn't think of a better way but it porbably works
             x_upper = (bool)(x-1 > -1)
-            x_lower = (bool)(x+1 < self.grid_size)
+            x_lower = (bool)(x+1 < self.size)
             y_upper = (bool)(y-1 > -1)
-            y_lower = (bool)(y+1 < self.grid_size)
+            y_lower = (bool)(y+1 < self.size)
 
             if(x_upper):
                 if(self.grid[x-1][y].tile_id < 8):
@@ -98,9 +102,9 @@ class Grid():
         """Convert a self.grid into a string."""
         grid_message = ''
 
-        for i in range(self.grid_size):
+        for i in range(self.size):
             grid_message += '\n'
-            for j in range(self.grid_size):
+            for j in range(self.size):
                 # add tile_emojis[tile.tile_id] to string
                 if self.grid[i][j].flagged:
                     grid_message += f'{tile_emojis[11]}'
@@ -109,6 +113,21 @@ class Grid():
                 else:
                     grid_message += f'{tile_emojis[self.grid[i][j].tile_id]}'
         return grid_message
+
+
+class PredictionType(Enum):
+    """Enum to store the type of prediction the user is making/has made."""
+
+    Flag   = 0,
+    Reveal = 1
+
+
+class PredictionStage(Enum):
+    """Enum to store the current prediction stage of the user."""
+
+    Type =   0,
+    Column = 1,  # Letter
+    Row    = 2   # Number
 
 
 def create_callback_button(
@@ -140,12 +159,20 @@ def create_callback_button(
 class MinesweeperPredictionView(miru.View):
     """Miru view which asks the user for minesweeper cell predictions."""
 
+    grid: Grid
     flag_button: miru.Button
     reveal_button: miru.Button
+    selection_buttons: list[miru.Button]
 
-    def __init__(self) -> None:
+    current_stage: PredictionStage
+    current_type: PredictionType | None
+    current_column: int | None
+    current_row: int | None
+
+    def __init__(self, grid: Grid) -> None:
         """Create buttons for all three stages and show stage one."""
         super().__init__()
+        self.grid = grid
         self.flag_button = create_callback_button(
             '(Un)flag',
             callback=self.prediction_type_button_callback
@@ -154,22 +181,73 @@ class MinesweeperPredictionView(miru.View):
             'Reveal',
             callback=self.prediction_type_button_callback
         )
-        self.show_prediction_type_buttons()
+        self.reveal_button = create_callback_button(
+            'Reveal',
+            callback=self.prediction_type_button_callback
+        )
+        self.selection_buttons = [
+            create_callback_button(
+                '',
+                callback=self.selection_button_callback
+            )
+            for i in range(grid.size)
+        ]
+        self.current_stage = PredictionStage.Type
+        # Cannot use show_prediction_type_buttons as it requires async
+        self.add_item(self.flag_button)
+        self.add_item(self.reveal_button)
 
-    def show_prediction_type_buttons(self) -> None:
+    async def show_prediction_type_buttons(self) -> None:
         """Remove all buttons and then show stage 1 buttons."""
+        if self.current_stage is not PredictionStage.Type:
+            raise Exception('Invalid prediction stage for type buttons')
         self.clear_items()
         self.add_item(self.flag_button)
         self.add_item(self.reveal_button)
+        await self.message.edit(components=self)
+
+    async def show_selection_buttons(self) -> None:
+        """Remove all buttons and then show stage 2 or 3 buttons."""
+        if self.current_stage not in [
+            PredictionStage.Column, PredictionStage.Row
+        ]:
+            raise Exception('Invalid prediction stage for selection buttons')
+        self.clear_items()
+        for idx, selection_button in enumerate(self.selection_buttons):
+            if self.current_stage is PredictionStage.Column:
+                selection_button.label = string.ascii_uppercase[idx]
+            else:
+                selection_button.label = str(idx)
+            self.add_item(selection_button)
+        await self.message.edit(components=self)
 
     async def prediction_type_button_callback(
         self, ctx: miru.ViewContext, button: miru.Button
     ) -> None:
         """Handle stage 1 buttons being pressed by showing stage 2."""
+        if self.current_stage is not PredictionStage.Type:
+            raise Exception('Invalid prediction stage for type buttons')
+        self.current_stage = PredictionStage.Column
         if button == self.flag_button:
-            await ctx.respond('Pressed flag')
+            self.current_type = PredictionType.Flag
         else:
-            await ctx.respond('Pressed reveal')
+            self.current_type = PredictionType.Reveal
+        await self.show_selection_buttons()
+
+    async def selection_button_callback(
+        self, ctx: miru.ViewContext, button: miru.Button
+    ) -> None:
+        """Handle state 2 and 3 buttons being pressed."""
+        if self.current_stage is PredictionStage.Column:
+            self.current_stage = PredictionStage.Row
+            self.current_column = string.ascii_uppercase.index(button.label)
+            await self.show_selection_buttons()
+        elif self.current_stage is PredictionStage.Row:
+            self.current_stage = PredictionStage.Type
+            self.current_row = int(button.label)
+            await self.show_prediction_type_buttons()
+        else:
+            raise Exception('Invalid prediction stage for selection buttons')
 
 
 # def update_cell(col: int, row: int, grid: list[list[Tile]], flag: bool, uncover: bool) -> None:
@@ -434,7 +512,7 @@ class MineSweeperCommand:
         grid = Grid(self.selected_grid_size, self.selected_bomb_num)
         grid.setup_bombs()
 
-        view = MinesweeperPredictionView()
+        view = MinesweeperPredictionView(grid)
         message = await ctx.respond(grid, components=view, ensure_message=True)
         plugin.model.miru.start_view(view)
 
