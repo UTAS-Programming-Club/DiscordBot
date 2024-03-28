@@ -139,7 +139,8 @@ def check_win(grid: list[list[Tile]) -> None:
     
     for i in range(grid_size):
         for j in range(grid_size):
-            if grid[i][j].flagged and grid[i][j]
+            if grid[i][j].flagged and grid[i][j].tileID is 10:
+                bomb_num += 1
             
 
 class SelectionScreen(menu.Screen):
