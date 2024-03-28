@@ -22,10 +22,9 @@ from typing import Awaitable, Callable
 # TODO: Only generate bombs after first prediction,
 #       then max box count is one lower
 # TODO: Add description text
-# TODO: Add last input method
+# TODO: Add last input method to description
 # TODO: Fix delay when changing buttons
 # TODO: Lock to single player? Have both single player and cooperative modes?
-# TODO: Add back button to stages 2 and 3
 
 plugin = crescent.Plugin[hikari.GatewayBot, BotData]()
 tile_emojis = ['\N{LARGE YELLOW SQUARE}', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '\N{LARGE GREEN SQUARE}', '💥', '🚩']
@@ -164,6 +163,7 @@ def create_output_text(
     grid: Grid, last_prediction_type: PredictionType | None,
     last_column: int | None, last_row: int | None
 ) -> str:
+    """Produce a string that includes the grid, input methods and last move."""
     if (
          last_prediction_type is not None and
          last_column is not None and last_row is not None
@@ -174,13 +174,13 @@ def create_output_text(
             prediction_str = 'reveal'
         column_str = string.ascii_uppercase[last_column]
         row_str = str(last_row + 1)
-        return inspect.cleandoc(f'''You are playing minesweeper
+        return inspect.cleandoc(f'''You are playing minesweeper.
         Play using either the buttons below or by replying to this message
         with a message like C7 or C 7.
         The last move to was to {prediction_str} cell {column_str}{row_str}.'''
         ) + str(grid)
     else:
-        return inspect.cleandoc(f'''You are playing minesweeper
+        return inspect.cleandoc('''You are playing minesweeper.
         Play using either the buttons below or by replying to this message
         with a message like C7 or C 7.'''
         ) + str(grid)
@@ -192,12 +192,13 @@ class MinesweeperPredictionView(miru.View):
     grid: Grid
     flag_button: miru.Button
     reveal_button: miru.Button
+    back_button: miru.Button
     selection_buttons: list[miru.Button]
 
     current_stage: PredictionStage
-    current_type: PredictionType | None
-    current_column: int | None
-    current_row: int | None
+    current_type: PredictionType | None = None
+    current_column: int | None = None
+    current_row: int | None = None
 
     def __init__(self, grid: Grid) -> None:
         """Create buttons for all three stages and show stage one."""
@@ -214,6 +215,11 @@ class MinesweeperPredictionView(miru.View):
         self.reveal_button = create_callback_button(
             'Reveal',
             callback=self.prediction_type_button_callback
+        )
+        self.back_button = create_callback_button(
+            'Back',
+            style=hikari.ButtonStyle.DANGER,
+            callback=self.back_button_callback
         )
         self.selection_buttons = [
             create_callback_button(
@@ -252,6 +258,7 @@ class MinesweeperPredictionView(miru.View):
             else:
                 selection_button.label = str(idx + 1)
             self.add_item(selection_button)
+        self.add_item(self.back_button)
         await self.message.edit(components=self)
 
     async def prediction_type_button_callback(
@@ -266,6 +273,19 @@ class MinesweeperPredictionView(miru.View):
         else:
             self.current_type = PredictionType.Reveal
         await self.show_selection_buttons()
+
+    async def back_button_callback(
+        self, ctx: miru.ViewContext, button: miru.Button
+    ) -> None:
+        """Handle back button being pressed by reverting to previous stage."""
+        if self.current_stage is PredictionStage.Column:
+            self.current_stage = PredictionStage.Type
+            await self.show_prediction_type_buttons()
+        elif self.current_stage is PredictionStage.Row:
+            self.current_stage = PredictionStage.Column
+            await self.show_selection_buttons()
+        else:
+            raise Exception('Invalid prediction stage for back button')
 
     async def selection_button_callback(
         self, ctx: miru.ViewContext, button: miru.Button
@@ -303,170 +323,6 @@ class MinesweeperPredictionView(miru.View):
 #
 #     if flag:
 #         grid[col][row].flagged = not grid[col][row].flagged
-
-# class SelectionScreen(menu.Screen):
-#     """Miru screen which asks the user for a letter or number selection."""
-#
-#     flag: bool
-#     letter: Optional[chr] = None
-#
-#     def __init__(self, menu: menu.Menu, flag: bool,
-#                  self.grid_size: int,
-#                  letter: Optional[chr] = None) -> None:
-#         """Create an internal screen and store parameters for later use."""
-#         super().__init__(menu)
-#         self.flag = flag
-#         self.letter = letter
-#
-#     async def build_content(self) -> menu.ScreenContent:
-#         """Create a visible screen using stored properties."""
-#         prediction_type = '(un)flag' if self.flag else 'reveal'
-#         selection_type = 'column' if self.letter is None else 'row'
-#         if self.menu.message.id not in grids:
-#             return
-#         grid = grids[self.menu.message.id].grid
-#         return menu.ScreenContent(
-#             content=await redraw_grid(grid),
-#             embed=hikari.Embed(
-#                 title=f'Select {selection_type} for {prediction_type}'
-#             ),
-#         )
-#
-#     async def update_reply_prediction(self, reply_prediction: str) -> None:
-#         prediction_type = '(un)flag' if self.flag else 'reveal'
-#         selection_type = 'column' if self.letter is None else 'row'
-#         await self.menu.message.edit(
-#             embed=hikari.Embed(
-#                 title=f'Select {selection_type} for {prediction_type}',
-#                 description=f'Previous prediction was {reply_prediction}'
-#             )
-#         )
-#
-#     @menu.button(label='Back', custom_id='back',
-#                  style=hikari.ButtonStyle.SECONDARY)
-#     async def back(self, ctx: miru.ViewContext,
-#                    button: menu.ScreenButton) -> None:
-#         """Miru button to restore the previous screen."""
-#         await self.menu.pop()
-#
-#
-# class NumberButton(menu.ScreenButton):
-#     """Miru screen button that displays a provided number."""
-#
-#     number: int
-#
-#     def __init__(self, number: int) -> None:
-#         """Create a button with a number label."""
-#         self.number = number
-#         super().__init__(
-#           label=str(number + 1)
-#         )
-#
-#     async def callback(self, ctx: miru.ViewContext) -> None:
-#         """Handle user pressing button by showing root with selected cell."""
-#         col = ord(self.screen.letter) - ord('A')
-#         grid_info = grids[self.menu.message.id]
-#         update_cell(col, self.number, grid_info.grid, self.screen.flag, not self.screen.flag)
-#         grid_info.prediction_screen.previous_prediction = f'{self.screen.letter}{self.number + 1}'
-#         await self.menu.pop_until_root()
-#
-#
-# def create_number_screen(miru_menu: menu.Menu, self.grid_size: int, flag: bool,
-#                          letter: chr) -> menu.Screen:
-#     """Create a SelectionScreen set up to take a number from the user."""
-#     number_screen = SelectionScreen(miru_menu, flag, self.grid_size, letter)
-#     back_button = number_screen.get_item_by_id('back')
-#     number_screen.remove_item(back_button)
-#     for i in range(self.grid_size):
-#         number_screen.add_item(NumberButton(i))
-#     number_screen.add_item(back_button)
-#     return number_screen
-#
-#
-# class LetterButton(menu.ScreenButton):
-#     """Miru screen button that displays a provided letter."""
-#
-#     letter: chr
-#
-#     def __init__(self, letter_number: int) -> None:
-#         """Create a button with a captial letter label."""
-#         self.letter = chr(letter_number + ord('A'))
-#         super().__init__(
-#           label=str(self.letter)
-#         )
-#
-#     async def callback(self, ctx: miru.ViewContext) -> None:
-#         """Handle user pressing button by showing number selection screen."""
-#         grid = grids[self.menu.message.id].grid
-#         number_screen = create_number_screen(self.menu, len(grid), self.screen.flag,
-#                                              self.letter)
-#         await self.menu.push(number_screen)
-#
-#
-# def create_letter_screen(miru_menu: menu.Menu, self.grid_size: int, flag: bool) -> menu.Screen:
-#     """Create a SelectionScreen set up to take a letter from the user."""
-#     letter_screen = SelectionScreen(miru_menu, flag, self.grid_size)
-#     back_button = letter_screen.get_item_by_id('back')
-#     letter_screen.remove_item(back_button)
-#     for i in range(self.grid_size):
-#         letter_screen.add_item(LetterButton(i))
-#     letter_screen.add_item(back_button)
-#     return letter_screen
-#
-#
-# class PredictionScreen(menu.Screen):
-#     """Miru screen to asks the user what minesweeper prediction to make."""
-#
-#     previous_prediction: Optional[str] = None
-#     self.grid_size: int
-#
-#     def __init__(self, menu: menu.Menu, self.grid_size: int) -> None:
-#         super().__init__(menu)
-#         self.grid_size = grid_size
-#
-#     async def build_content(self) -> menu.ScreenContent:
-#         """Create a visible screen to show prediction option buttons."""
-#         embed = hikari.Embed(title='Start Prediction')
-#         if self.previous_prediction is not None:
-#             embed.description =\
-#               f'Previous prediction was {self.previous_prediction}'
-#         if self.menu.message is not None:
-#             grid = grids[self.menu.message.id].grid
-#             grid_str = await redraw_grid(grid)
-#         else:
-#             grid_str = ''
-#         return menu.ScreenContent(content=grid_str, embed=embed)
-#
-#     async def update_reply_prediction(self, reply_prediction: str) -> None:
-#         if self.menu.message is None:
-#             return
-#         self.previous_prediction = reply_prediction
-#         await self.menu.message.edit(
-#             embed=hikari.Embed(
-#                 title='Start Prediction',
-#                 description=f'Previous prediction was {self.previous_prediction}'
-#             )
-#         )
-#
-#     async def show_initial_grid(self, message: hikari.Message) -> None:
-#         """Create a visible screen to show prediction option buttons."""
-#         if message.id not in grids:
-#             return
-#         grid = grids[message.id].grid
-#         grid_str = await redraw_grid(grid)
-#         await message.edit(grid_str)
-#
-#     @menu.button(label="(un)Flag")
-#     async def flag(self, ctx: miru.ViewContext,
-#                    button: menu.ScreenButton) -> None:
-#         """Miru button to make a bomb prediction."""
-#         await self.menu.push(create_letter_screen(self.menu, self.grid_size, True))
-#
-#     @menu.button(label="Reveal")
-#     async def reveal(self, ctx: miru.ViewContext,
-#                        button: menu.ScreenButton) -> None:
-#         """Miru button to make a no bomb prediction."""
-#         await self.menu.push(create_letter_screen(self.menu, self.grid_size, False))
 #
 #
 # @plugin.include
@@ -519,8 +375,8 @@ class MinesweeperPredictionView(miru.View):
 
 @plugin.include
 @docstrings.parse_doc
-@crescent.command(name='minesweeper', dm_enabled=False)
-class MineSweeperCommand:
+@crescent.command(name='minesweeper')
+class MinesweeperCommand:
     """
     Play Minesweeper.
 
@@ -541,7 +397,7 @@ class MineSweeperCommand:
     )
 
     async def callback(self, ctx: crescent.Context) -> None:
-        """Handle rpschallenge command being run by showing button view."""
+        """Handle minesweeper command being run by showing grid and buttons."""
         grid = Grid(self.selected_grid_size, self.selected_bomb_num)
         grid.setup_bombs()
         grid_str = create_output_text(grid, None, None, None)
