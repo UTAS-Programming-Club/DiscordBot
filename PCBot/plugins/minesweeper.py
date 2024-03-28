@@ -1,9 +1,10 @@
-"""This module contains the bot's rock paper scissors minigame command."""
+"""This module contains the bot's minesweeper minigame command."""
 
 from __future__ import annotations
 
 import crescent
 import hikari
+import inspect
 import miru
 import random
 import string
@@ -21,7 +22,10 @@ from typing import Awaitable, Callable
 # TODO: Only generate bombs after first prediction,
 #       then max box count is one lower
 # TODO: Add description text
-# TODO: Add last selection text and mention method
+# TODO: Add last input method
+# TODO: Fix delay when changing buttons
+# TODO: Lock to single player? Have both single player and cooperative modes?
+# TODO: Add back button to stages 2 and 3
 
 plugin = crescent.Plugin[hikari.GatewayBot, BotData]()
 tile_emojis = ['\N{LARGE YELLOW SQUARE}', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '\N{LARGE GREEN SQUARE}', '💥', '🚩']
@@ -99,7 +103,7 @@ class Grid:
                     self.grid[x][y+1].tile_id += 1
 
     def __str__(self) -> str:
-        """Convert a self.grid into a string."""
+        """Convert a grid into a string."""
         grid_message = ''
 
         for i in range(self.size):
@@ -156,6 +160,32 @@ def create_callback_button(
     return button
 
 
+def create_output_text(
+    grid: Grid, last_prediction_type: PredictionType | None,
+    last_column: int | None, last_row: int | None
+) -> str:
+    if (
+         last_prediction_type is not None and
+         last_column is not None and last_row is not None
+    ):
+        if last_prediction_type is PredictionType.Flag:
+            prediction_str = '(un)flag'
+        elif last_prediction_type is PredictionType.Reveal:
+            prediction_str = 'reveal'
+        column_str = string.ascii_uppercase[last_column]
+        row_str = str(last_row + 1)
+        return inspect.cleandoc(f'''You are playing minesweeper
+        Play using either the buttons below or by replying to this message
+        with a message like C7 or C 7.
+        The last move to was to {prediction_str} cell {column_str}{row_str}.'''
+        ) + str(grid)
+    else:
+        return inspect.cleandoc(f'''You are playing minesweeper
+        Play using either the buttons below or by replying to this message
+        with a message like C7 or C 7.'''
+        ) + str(grid)
+
+
 class MinesweeperPredictionView(miru.View):
     """Miru view which asks the user for minesweeper cell predictions."""
 
@@ -204,7 +234,10 @@ class MinesweeperPredictionView(miru.View):
         self.clear_items()
         self.add_item(self.flag_button)
         self.add_item(self.reveal_button)
-        await self.message.edit(components=self)
+        grid_str = create_output_text(
+            self.grid, self.current_type, self.current_column, self.current_row
+        )
+        await self.message.edit(grid_str, components=self)
 
     async def show_selection_buttons(self) -> None:
         """Remove all buttons and then show stage 2 or 3 buttons."""
@@ -217,7 +250,7 @@ class MinesweeperPredictionView(miru.View):
             if self.current_stage is PredictionStage.Column:
                 selection_button.label = string.ascii_uppercase[idx]
             else:
-                selection_button.label = str(idx)
+                selection_button.label = str(idx + 1)
             self.add_item(selection_button)
         await self.message.edit(components=self)
 
@@ -244,7 +277,7 @@ class MinesweeperPredictionView(miru.View):
             await self.show_selection_buttons()
         elif self.current_stage is PredictionStage.Row:
             self.current_stage = PredictionStage.Type
-            self.current_row = int(button.label)
+            self.current_row = int(button.label) - 1
             await self.show_prediction_type_buttons()
         else:
             raise Exception('Invalid prediction stage for selection buttons')
@@ -511,9 +544,12 @@ class MineSweeperCommand:
         """Handle rpschallenge command being run by showing button view."""
         grid = Grid(self.selected_grid_size, self.selected_bomb_num)
         grid.setup_bombs()
+        grid_str = create_output_text(grid, None, None, None)
 
         view = MinesweeperPredictionView(grid)
-        message = await ctx.respond(grid, components=view, ensure_message=True)
+        message = await ctx.respond(
+            grid_str, components=view, ensure_message=True
+        )
         plugin.model.miru.start_view(view)
 
         grids[message.id] = grid
