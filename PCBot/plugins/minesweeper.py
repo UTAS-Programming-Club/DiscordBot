@@ -4,6 +4,7 @@ import dataclasses
 import crescent
 import hikari
 import random
+import miru
 from crescent.ext import docstrings
 from PCBot.botdata import BotData
 from miru.ext import menu
