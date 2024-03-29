@@ -14,6 +14,7 @@ class BotData:
 
 token_path = './secrets/token'
 guild_id_path = './secrets/guild'
+gh_pem_path = './secrets/gh_private.pem'
 
 
 def get_token_file_path(file: str) -> str:

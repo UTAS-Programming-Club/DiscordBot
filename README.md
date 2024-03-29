@@ -4,7 +4,9 @@ pip install -r requirements.txt
 ```
 
 # Setup
-Place a discord bot token in secrets/token
+Place a discord bot token from discord's [developer portal](https://discord.com/developers/applications) in secrets/token(.txt)
+Place a discord guild id in secrets/guild(.txt)
+Place a github private pem in secrets/gh_private.pem, currently this has to be one for the programming club's github app but that can change
 
 # Testing Bot
 ```sh
@@ -27,6 +29,10 @@ PC club members are welcome to contribute and there is a section in each docstri
 * Log all run commands with the requester's name in the console
 * Make sure all command docstrings have requested by, implemented by and arguments sections for help command
 * More commands
+* Support for more python versions than just 3.10 and 3.11
+* Make guild id optional
+* Add options to start into mocking mode for each command
+* Auto reload of a command on run/file change
 * Anything listed as TODO within the plugins
 
 

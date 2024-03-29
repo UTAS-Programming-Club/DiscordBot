@@ -68,3 +68,9 @@ if __name__ == '__main__':
     #              options={
     #   'user': make_interactions_member(crescent_client.app, 2, 'testuser2')
     # })
+
+    # info_public = True
+    # Test info command
+    # mock_command(crescent_client, 'PCBot.plugins.info', 0, options={
+    #   'public': info_public
+    # })
