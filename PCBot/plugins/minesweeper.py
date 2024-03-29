@@ -150,6 +150,7 @@ class Grid:
         if move_type is PredictionType.Flag:
             self.grid[col][row].flagged = not self.grid[col][row].flagged
         
+        self.fill_blanks(row, col)
         self.check_win()
 
     def check_win(self) -> None:
@@ -164,6 +165,42 @@ class Grid:
         
         if self.bomb_count == bomb_num:
             self.grid_state = State.Won
+            
+    def fill_blanks(self, row: int, col: int) -> None:
+        if self.grid[col][row].uncovered == False:
+            self.grid[col][row].uncovered = True
+        else:
+            return
+        
+        if not self.grid[col][row].tile_id == 0:
+            return
+        
+        # this is ugly I'm just lazy and couldn't think of a better way but it porbably works
+        x_upper = (bool)(col-1 > -1)
+        x_lower = (bool)(col+1 < self.size)
+        y_upper = (bool)(row-1 > -1)
+        y_lower = (bool)(row+1 < self.size)
+
+        if(x_upper):
+            self.fill_blanks(row, col-1)
+            
+            if(y_upper):
+                self.fill_blanks(row-1, col-1)
+            if(y_lower):
+                self.fill_blanks(row+1, col-1)
+        if(x_lower):
+            self.fill_blanks(row, col+1)
+            
+            if(y_upper):
+                self.fill_blanks(row-1, col+1)
+            if(y_lower):
+                self.fill_blanks(row+1, col+1)
+
+        if(y_upper):
+            self.fill_blanks(row-1, col)
+
+        if(y_lower):
+            self.fill_blanks(row+1, col)
 
 class PredictionType(Enum):
     """Enum to store the type of prediction the user is making/has made."""
