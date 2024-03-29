@@ -13,21 +13,19 @@ from enum import Enum
 from PCBot.botdata import BotData
 from typing import Awaitable, Callable
 
-# TODO: Support grid sizes larger than 9x9, limited by reply input method
+# TODO: Support grid sizes larger than 9x9, limited by reply input method and then by discord at 24x24
 # TODO: Readd reply input method
 # TODO: Finish button input method
 # TODO: Replace tile_emojis with an Enum
-# TODO: Add grid row and column labels
 # TODO: Indicate that bomb count is capped at grid size * grid size
 # TODO: Only generate bombs after first prediction,
 #       then max box count is one lower
-# TODO: Add description text
 # TODO: Add last input method to description
 # TODO: Fix delay when changing buttons
 # TODO: Lock to single player? Have both single player and cooperative modes?
 
 plugin = crescent.Plugin[hikari.GatewayBot, BotData]()
-tile_emojis = ['\N{LARGE YELLOW SQUARE}', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '\N{LARGE GREEN SQUARE}', '💥', '🚩']
+tile_emojis = ['\N{LARGE YELLOW SQUARE}', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '\N{LARGE GREEN SQUARE}', '\💣', '🚩']
 grids: dict[hikari.snowflakes.Snowflake, Grid] = {}
 
 
@@ -103,18 +101,30 @@ class Grid:
 
     def __str__(self) -> str:
         """Convert a grid into a string."""
-        grid_message = ''
+        # It took ages to find a way to align the grid on discord, the best
+        # method found uses a list for the row numbers and regional indicators
+        # for the letters. Then to align letters to the grid that line needs to
+        # start with the same indent as the list indices which were found by
+        # trial and error for single and double digits.
+        if self.size <= 9:
+            letter_indent = '⠀  ' # Braille pattern space, thin space, six-per-em space
+        elif self.size <= 99:
+            letter_indent = '⠀   ' # Braille pattern space, figure space, thin space, six-per-em space
+        else:
+            raise Exception(f'First line indent for {self.size} not known')
+
+        grid_message = f'\n{letter_indent}' + ' '.join([chr(i + 0x1F1E6) for i in range(self.size)])
 
         for i in range(self.size):
-            grid_message += '\n'
+            grid_message += f'\n{i + 1}. '
             for j in range(self.size):
                 # add tile_emojis[tile.tile_id] to string
                 if self.grid[i][j].flagged:
-                    grid_message += f'{tile_emojis[11]}'
+                    grid_message += f' {tile_emojis[11]}'
                 elif not self.grid[i][j].uncovered:
-                    grid_message += f'{tile_emojis[9]}'
+                    grid_message += f' {tile_emojis[9]}'
                 else:
-                    grid_message += f'{tile_emojis[self.grid[i][j].tile_id]}'
+                    grid_message += f' {tile_emojis[self.grid[i][j].tile_id]}'
         return grid_message
 
 
