@@ -143,14 +143,17 @@ class Grid:
         # If uncovering remove flag
         if move_type is PredictionType.Reveal:
             self.grid[col][row].flagged = False
-            self.grid[col][row].uncovered = True
+            if self.grid[col][row].tile_id != 0:
+                self.grid[col][row].uncovered = True
+            else:
+                self.fill_blanks(row, col)
+            
             if self.grid[col][row].tile_id == 10:
                 self.grid_state = State.Lost
 
         if move_type is PredictionType.Flag:
             self.grid[col][row].flagged = not self.grid[col][row].flagged
         
-        self.fill_blanks(row, col)
         self.check_win()
 
     def check_win(self) -> None:
