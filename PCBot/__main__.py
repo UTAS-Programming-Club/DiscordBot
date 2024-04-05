@@ -1,5 +1,6 @@
 """This module starts the PC discord bot."""
 
+from colorama import just_fix_windows_console
 import crescent
 import hikari
 import miru
@@ -25,7 +26,9 @@ with open(get_token_file_path(guild_id_path)) as f:
 # Create bot
 # GUILD_MESSAGES is required for miru
 # default_guild is needed to get register_commands to do a guild specific push
-bot = hikari.GatewayBot(token, intents=hikari.Intents.GUILD_MESSAGES)
+bot = hikari.GatewayBot(
+    token, intents=hikari.Intents.GUILD_MESSAGES, force_color=True
+)
 miru_client = miru.Client(bot)
 crescent_client = crescent.Client(bot, BotData(miru_client),
                                   default_guild=guild_id)
@@ -37,6 +40,7 @@ print_plugin_info(plugin_info)
 
 # Run the bot
 if __name__ == '__main__':
+    just_fix_windows_console()
     bot.run()
 
     # These make testing the bot easier since they don't require reloading or
