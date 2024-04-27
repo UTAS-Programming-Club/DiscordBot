@@ -7,7 +7,9 @@ import miru
 from PCBot.botdata import (
     BotData, token_path, guild_id_path, get_token_file_path
 )
-from PCBot.pluginmanager import get_plugin_info, print_plugin_info
+from PCBot.pluginmanager import (
+  get_plugin_info, print_plugin_info, reload_plugins
+)
 # from PCBot.testing.mocking import mock_command
 # from PCBot.testing.hikari.test_users_comparision import (
 #   make_interactions_member
@@ -33,8 +35,17 @@ miru_client = miru.Client(bot)
 crescent_client = crescent.Client(bot, BotData(miru_client),
                                   default_guild=guild_id)
 
+
+async def load_plugins():
+    """Load working plugins while ignoring others."""
+    try:
+        await reload_plugins(crescent_client.plugins, 'PCBot.plugins')
+    finally:
+        await crescent_client.commands.register_commands()
+
+
 # Load plugins
-crescent_client.plugins.load_folder('PCBot.plugins')
+crescent_client._run_future(load_plugins())
 plugin_info = get_plugin_info(crescent_client.plugins)
 print_plugin_info(plugin_info)
 
