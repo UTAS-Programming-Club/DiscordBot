@@ -5,6 +5,8 @@ GameData.json
 
 # Dectalk plugin assets
 dectalk/Lavalink.jar
+dectalk/*.wav
+dectalk/dectalk/
 
 nppBackup
 

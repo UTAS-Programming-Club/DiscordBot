@@ -19,7 +19,8 @@ if sys.version_info.minor < 11:
 import ongaku
 from ongaku.ext import checker
 
-if not os.path.isfile('dectalk/Lavalink.jar'):
+if not os.path.isfile('dectalk/Lavalink.jar') or \
+   not os.path.isfile('dectalk/dectalk/say'):
     raise Exception('Unable to find required dectalk files')
 
 plugin = crescent.Plugin[hikari.GatewayBot, BotData]()
@@ -40,6 +41,14 @@ def start_lavalink():
         cwd='./dectalk',
         env=environ
     )
+
+
+def run_dectalk(text: str, guild_id: hikari.Snowflake) -> str:
+    name = f'{guild_id}.wav'
+    subprocess.run(
+        ['dectalk/dectalk/say', '-a', text, '-fo', f'dectalk/{name}']
+    )
+    return name
 
 
 async def fetch_player(guild_id: hikari.Snowflake) -> ongaku.Player | None:
@@ -88,7 +97,7 @@ class DecTalkCommand:
     Implemented by something sensible(somethingsensible).
     """
 
-    # text = crescent.option(str, 'Text to speak')
+    text = crescent.option(str, 'Text to speak')
     channel = crescent.option(
         hikari.GuildVoiceChannel, 'Channel to speak in', default=None
     )
@@ -96,6 +105,8 @@ class DecTalkCommand:
     async def callback(self, ctx: crescent.Context) -> None:
         """Handle dectalk command being run."""
         sent_message = False
+
+        wav_name = run_dectalk(self.text, ctx.guild_id)
 
         if self.channel is None:
             voice_state = ctx.client.app.cache.get_voice_state(
@@ -153,7 +164,7 @@ class DecTalkCommand:
         first_call = False
 
         # TODO: Check if this is needed?
-        checked_query = await checker.check('test.wav')
+        checked_query = await checker.check(wav_name)
         if checked_query.type != checker.CheckedType.QUERY:
             await ctx.respond(
               'Failed to look for dectalk matches', ephemeral=True
