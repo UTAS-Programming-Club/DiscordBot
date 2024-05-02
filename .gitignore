@@ -1,5 +1,10 @@
 secrets
+
+# Text adventure plugin assets
 GameData.json
+
+# Dectalk plugin assets
+dectalk/Lavalink.jar
 
 nppBackup
 

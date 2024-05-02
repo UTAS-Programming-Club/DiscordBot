@@ -1,0 +1,17 @@
+server:
+    address: 0.0.0.0
+
+lavalink:
+    server:
+        sources:
+            youtube: false
+            bandcamp: false
+            soundcloud: false
+            twitch: false
+            vimeo: false
+            http: false
+            local: true
+
+metrics:
+  prometheus:
+    enabled: false

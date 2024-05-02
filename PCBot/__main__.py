@@ -4,8 +4,10 @@ from colorama import just_fix_windows_console
 import crescent
 import hikari
 import miru
+import sys
 from PCBot.botdata import (
-    BotData, token_path, guild_id_path, get_token_file_path
+    BotData, token_path, lavalink_password_path,
+    guild_id_path, get_token_file_path
 )
 from PCBot.pluginmanager import (
   get_plugin_info, print_plugin_info, reload_plugins
@@ -15,11 +17,16 @@ from PCBot.pluginmanager import (
 #   make_interactions_member
 # )
 
-# TODO: Decide if loading in safe mode is allowed, reuse code from reload.py
+if sys.version_info.minor >= 11:
+    import ongaku
 
 # Load bot token
 with open(get_token_file_path(token_path)) as f:
     token = f.read().strip()
+
+if sys.version_info.minor >= 11:
+    with open(get_token_file_path(lavalink_password_path)) as f:
+        lavalink_password = f.read().strip()
 
 # Load guild id
 with open(get_token_file_path(guild_id_path)) as f:
@@ -29,11 +36,18 @@ with open(get_token_file_path(guild_id_path)) as f:
 # GUILD_MESSAGES is required for miru
 # default_guild is needed to get register_commands to do a guild specific push
 bot = hikari.GatewayBot(
-    token, intents=hikari.Intents.GUILD_MESSAGES, force_color=True
+    token, force_color=True,
+    intents=hikari.intents.Intents.GUILDS | hikari.Intents.GUILD_MESSAGES
+            | hikari.Intents.GUILD_VOICE_STATES
 )
 miru_client = miru.Client(bot)
-crescent_client = crescent.Client(bot, BotData(miru_client),
-                                  default_guild=guild_id)
+
+if sys.version_info.minor >= 11:
+    ongaku_client = ongaku.Client(bot, password=lavalink_password)
+    model = BotData(miru_client, ongaku_client)
+else:
+    model = BotData(miru_client)
+crescent_client = crescent.Client(bot, model, default_guild=guild_id)
 
 
 async def load_plugins():
@@ -95,4 +109,6 @@ if __name__ == '__main__':
     # })
 
     # Test text adventure command
-    # mock_command(crescent_client, 'PCBot.plugins.textadventure', 0, options={})
+    # mock_command(crescent_client, 'PCBot.plugins.textadventure', 0,
+    #              options={}
+    # )
