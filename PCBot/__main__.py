@@ -45,7 +45,11 @@ async def load_plugins():
 
 
 # Load plugins
+# For mocking
+# crescent_client.plugins.load_folder('PCBot.plugins')
+# For running the bot
 crescent_client._run_future(load_plugins())
+
 plugin_info = get_plugin_info(crescent_client.plugins)
 print_plugin_info(plugin_info)
 
@@ -89,3 +93,6 @@ if __name__ == '__main__':
     # mock_command(crescent_client, 'PCBot.plugins.info', 0, options={
     #   'public': info_public
     # })
+
+    # Test text adventure command
+    # mock_command(crescent_client, 'PCBot.plugins.textadventure', 0, options={})

@@ -11,6 +11,7 @@ if not os.path.isfile('GameData.json') or not os.path.isfile('game.so'):
 
 plugin = crescent.Plugin[hikari.GatewayBot, None]()
 
+# TODO: Switch to other method so that including headers is allowed
 ffi = FFI()
 ffi.cdef("""
 // From arena.h
@@ -26,6 +27,17 @@ ffi.cdef("""
         Region *begin, *end;
     } Arena;
 
+// From types.h
+    enum ScreenID {
+        // ..
+        InvaidScreenID = 65535
+    };
+
+    enum InputOutcome {
+        InvalidInputOutcome = 0
+        // ..
+    };
+
 // From game.h
     struct GameInput {
 // public, safe to use outside of backend
@@ -36,7 +48,7 @@ ffi.cdef("""
 
     struct GameOutput {
 // public, safe to use outside of backend
-        uint32_t screenID;
+        enum ScreenID screenID;
         char32_t *body;
         uint8_t inputCount;
         struct GameInput *inputs;
@@ -44,6 +56,7 @@ ffi.cdef("""
         Arena arena;
         bool bodyArena;
         bool inputsArrayArena;
+        unsigned char *stateData;
     };
 
     bool SetupGame(void);
