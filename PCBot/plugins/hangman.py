@@ -19,56 +19,65 @@ words = [
     'these', 'are', 'some', 'words'
 ]
 
-maxMistakeCount = 5
+max_mistake_count = 5
+
 
 @dataclass
 class HangmanGame:
+    """Maintain and allow guesses for a hangman game."""
+
     user_id: hikari.snowflakes.Snowflake
     word: str
     guesses: list[chr]
 
-
-    def AddGuess(self, guess: chr) -> bool:
+    def add_guess(self, guess: chr) -> bool:
+        """Add a guess if it was not already made, reports whether it was added."""
         if guess not in self.guesses:
             self.guesses.append(guess)
             return True
         else:
             return False
 
-    def GetCurrentStatus(self, message_id: Optional[hikari.snowflakes.Snowflake]) -> str:
+    def get_current_status(
+        self, message_id: Optional[hikari.snowflakes.Snowflake]
+    ) -> str:
+        """Produce a string to describe the current state of the game."""
         status = 'Hangman: \n'
 
-        playerWon = True
+        player_won = True
         for letter in self.word:
             if letter in self.guesses:
                 status += letter
             else:
                 status += '\\_'
-                playerWon = False
+                player_won = False
 
         status += '\n\nGuesses: ' + ''.join(self.guesses)
 
-        mistakeCount = len([
+        mistake_count = len([
           letter for letter in self.guesses if letter not in self.word
         ])
-        if mistakeCount >= maxMistakeCount:
+        if mistake_count >= max_mistake_count:
             status += (
               '\n\nYou have made too many incorrect guesses\n' +
               "The answer was: '" + self.word + "'."
             )
-            playerWon = False
+            player_won = False
 
-        if playerWon:
+        if player_won:
             status += '\n\nYou have won the game!'
             if message_id is not None:
                 games.pop(message_id)
         return status
 
+
 games: dict[hikari.snowflakes.Snowflake, HangmanGame] = {}
+
 
 @plugin.include
 @crescent.event
 async def on_message_create(event: hikari.MessageCreateEvent):
+    """Handle replies to hangman messages containing letter guesses."""
     if event.message.referenced_message is None:
         return
     referenced_message = event.message.referenced_message
@@ -91,16 +100,18 @@ async def on_message_create(event: hikari.MessageCreateEvent):
     if message_char not in string.ascii_lowercase:
         return
 
-    if not game_info.AddGuess(message_char):
+    # TODO: Check if ephmeral replies can even work, switch the a new message?
+    if not game_info.add_guess(message_char):
         await event.message.respond(
             "Your guess '" + message_char + "' has already been made.",
-            flags = hikari.MessageFlag.EPHEMERAL
+            flags=hikari.MessageFlag.EPHEMERAL
         )
 
     await referenced_message.edit(
-      game_info.GetCurrentStatus(referenced_message.id)
+      game_info.get_current_status(referenced_message.id)
     )
     await event.message.delete()
+
 
 @plugin.include
 @docstrings.parse_doc
@@ -117,9 +128,9 @@ class HangmanCommand:
         """Handle hangman command being run by showing the board."""
         word = random.choice(words)
         game = HangmanGame(ctx.user.id, word, [])
-        
+
         message = await ctx.respond(
-          game.GetCurrentStatus(None),
+          game.get_current_status(None),
           ensure_message=True
         )
 
