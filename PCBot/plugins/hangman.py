@@ -1,8 +1,6 @@
 """This module contains the bot's hangman minigame command."""
 
-# TODO: Find a good word list with some easy and hard words
 # TODO: Support multiplayer where one player provides the word and the other plays the game
-# TODO: Report mistakes, either by a number or with a hanging man
 
 import crescent
 import hikari
@@ -54,33 +52,74 @@ class HangmanGame:
         self, message_id: Optional[hikari.snowflakes.Snowflake]
     ) -> str:
         """Produce a string to describe the current state of the game."""
-        status = 'Hangman: \n'
+        mistake_count = len([
+          letter for letter in self.guesses if letter not in self.word
+        ])
+
+        # Line 1: "Hangman: "
+        status = '```Hangman: \n'
+
+        # Line 2: "╭────╮   Word: _____"
+        if mistake_count >= 1:
+            status += '╭────╮   '
+        status += 'Word: '
 
         player_won = True
         for letter in self.word:
             if letter in self.guesses:
                 status += letter
             else:
-                status += '\\_'
+                status += '_'
                 player_won = False
+        status += '\n'
 
-        status += '\n\nGuesses: ' + ''.join(self.guesses)
+        # Line 3: "│    😟"
+        if mistake_count >= 1:
+            status += '│   '
+        if mistake_count >= max_mistake_count - 3:
+            status += ' 😟'
+        status += '\n'
 
-        mistake_count = len([
-          letter for letter in self.guesses if letter not in self.word
-        ])
+        # Line 4: "│   ╱│╲  Guesses: ...."
+        if mistake_count >= 1:
+            status += '│   '
+        if mistake_count >= max_mistake_count - 2:
+            status += '╱│╲  '
+        elif mistake_count >= 1:
+            status += ' ' * len('╱│╲  ')
+        status += 'Guesses: ' + ''.join(self.guesses) + '\n'
+
+        # Line 5: "│    │"
+        if mistake_count >= 1:
+          status += '│'
+        if mistake_count >= max_mistake_count - 1:
+          status += '    │'
+        status += '\n'
+
+        # Line 6: "│   ╱ ╲  RESULT STRING 1"
+        if mistake_count >= 1:
+          status += '│   '
         if mistake_count >= max_mistake_count:
-            status += (
-              '\n\nYou have made too many incorrect guesses\n' +
-              "The answer was: '" + self.word + "'."
-            )
+          status += '╱ ╲  '
+        elif mistake_count >= 1:
+            status += ' ' * len('╱ ╲  ')
+
+        if mistake_count >= max_mistake_count:
+            status += 'You have made too many incorrect guesses'
             player_won = False
 
         if player_won:
-            status += '\n\nYou have won the game!'
+            status += 'You have won the game!'
             if message_id is not None:
                 games.pop(message_id)
-        return status
+
+        # Line 7: "┴        RESULT STRING 2"
+        if mistake_count >= 1:
+            status += '\n┴'
+        if mistake_count >= max_mistake_count:
+            status += "        The answer was: '" + self.word + "'."
+
+        return status + '```'
 
 
 games: dict[hikari.snowflakes.Snowflake, HangmanGame] = {}
