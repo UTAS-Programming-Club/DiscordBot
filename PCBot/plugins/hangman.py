@@ -6,29 +6,41 @@
 
 import crescent
 import hikari
+import linecache
 import random
 import string
 from crescent.ext import docstrings
-from dataclasses import dataclass
 from typing import Optional
 
 plugin = crescent.Plugin[hikari.GatewayBot, None]()
 
-words = [
-    'this', 'is', 'a', 'test',
-    'these', 'are', 'some', 'words'
-]
-
 max_mistake_count = 5
 
+word_file = 'third_party/wordlist/wordlist-20210729.txt'
+word_count: Optional[int] = None
 
-@dataclass
+
 class HangmanGame:
     """Maintain and allow guesses for a hangman game."""
 
     user_id: hikari.snowflakes.Snowflake
     word: str
     guesses: list[chr]
+
+    def __init__(self, user_id):
+        global word_count
+        if word_count is None:
+            with open(word_file) as f:
+                word_count = len(f.readlines())
+
+        self.user_id = user_id
+        self.guesses = []
+
+        line_num = random.randrange(word_count)
+        self.word = linecache.getline(word_file, line_num)
+        if '' == self.word:
+            raise Exception('Failed to load random word')
+        self.word = self.word.translate(str.maketrans('', '', '"\n'))
 
     def add_guess(self, guess: chr) -> bool:
         """Add a guess if it was not already made, reports whether it was added."""
@@ -100,7 +112,7 @@ async def on_message_create(event: hikari.MessageCreateEvent):
     if message_char not in string.ascii_lowercase:
         return
 
-    # TODO: Check if ephmeral replies can even work, switch the a new message?
+    # TODO: Check if ephmeral replies can even work, switch to a new message?
     if not game_info.add_guess(message_char):
         await event.message.respond(
             "Your guess '" + message_char + "' has already been made.",
@@ -126,8 +138,7 @@ class HangmanCommand:
 
     async def callback(self, ctx: crescent.Context) -> None:
         """Handle hangman command being run by showing the board."""
-        word = random.choice(words)
-        game = HangmanGame(ctx.user.id, word, [])
+        game = HangmanGame(ctx.user.id)
 
         message = await ctx.respond(
           game.get_current_status(None),

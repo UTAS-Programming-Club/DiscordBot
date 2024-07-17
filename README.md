@@ -1,6 +1,7 @@
 # Install Packages
 ```sh
-pip install -r requirements.txt
+pip install -r requirements3.10.txt # For python 3.10
+pip install -r requirements3.11.txt # For python 3.11, required for dectalk plugin
 ```
 
 # Setup
