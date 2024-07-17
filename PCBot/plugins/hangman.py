@@ -1,6 +1,7 @@
 """This module contains the bot's hangman minigame command."""
 
 # TODO: Support multiplayer where one player provides the word and the other plays the game
+# TODO: Show hanging man to the right of the game instead of the left?
 
 import crescent
 import hikari
@@ -8,6 +9,7 @@ import linecache
 import random
 import string
 from crescent.ext import docstrings
+from colorama import Fore, Style
 from typing import Optional
 
 plugin = crescent.Plugin[hikari.GatewayBot, None]()
@@ -57,7 +59,7 @@ class HangmanGame:
         ])
 
         # Line 1: "Hangman: "
-        status = '```Hangman: \n'
+        status = '```ansi\nHangman: \n'
 
         # Line 2: "╭────╮   Word: _____"
         if mistake_count >= 1:
@@ -76,18 +78,32 @@ class HangmanGame:
         # Line 3: "│    😟"
         if mistake_count >= 1:
             status += '│   '
-        if mistake_count >= max_mistake_count - 3:
+        if player_won and 0 < mistake_count < max_mistake_count:
+            status += ' 😌'
+        else if mistake_count >= max_mistake_count - 3:
             status += ' 😟'
         status += '\n'
 
-        # Line 4: "│   ╱│╲  Guesses: ...."
+        # Line 4: "│   ╱│╲  Guesses: ...., N wrong"
         if mistake_count >= 1:
             status += '│   '
         if mistake_count >= max_mistake_count - 2:
             status += '╱│╲  '
         elif mistake_count >= 1:
             status += ' ' * len('╱│╲  ')
-        status += 'Guesses: ' + ''.join(self.guesses) + '\n'
+
+        status += 'Guesses: ' + Style.BRIGHT
+        for guess in self.guesses:
+            if guess in self.word:
+                status += Fore.GREEN
+            else:
+                status += Fore.RED
+            status += guess
+        status += Style.RESET_ALL
+
+        if mistake_count >= 1:
+            status += f', {mistake_count} wrong'
+        status += '\n'
 
         # Line 5: "│    │"
         if mistake_count >= 1:
