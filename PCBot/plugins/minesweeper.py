@@ -4,6 +4,7 @@ import crescent
 import hikari
 import inspect
 import miru
+import re
 from crescent.ext import docstrings
 from dataclasses import dataclass
 from enum import Enum
@@ -200,6 +201,48 @@ class MinesweeperScreen(menu.Screen):
               f'Input button pressed during state {self.state}'
             )
 
+games: dict[hikari.snowflakes.Snowflake, MinesweeperScreen] = {}
+
+
+@plugin.include
+@crescent.event
+async def on_message_create(event: hikari.MessageCreateEvent):
+    """Handle replies to minesweeper messages containing moves."""
+    if event.message.referenced_message is None:
+        return
+    referenced_message = event.message.referenced_message
+
+    if referenced_message.id not in games:
+        return
+    game_info = games[referenced_message.id]
+
+    if event.message.content is None:
+        return
+    message_text = event.message.content
+
+    regex = r'^\s*(f?)\s*([a-x])\s*(\d{1,2})\s*$'
+    message_matches = re.search(regex, message_text, re.IGNORECASE)
+    if not message_matches:
+        return
+    message_groups = message_matches.groups()
+
+    if message_groups[0].lower() == 'f':
+        option = MinesweeperOption.FLAG
+    else:
+        option = MinesweeperOption.REVEAL
+
+    column = ord(message_groups[1].upper()[0]) - ord('A')
+    if column >= game_info.game.grid_size:
+        return
+
+    row = int(message_groups[2])
+    if row >= game_info.game.grid_size:
+        return
+
+    game_info.game.make_move(column, row, option, MinesweeperInputMethod.REPLY)
+    await game_info.show_option_buttons()
+
+    await event.message.delete()
 
 @plugin.include
 @docstrings.parse_doc
@@ -223,9 +266,16 @@ class MinesweeperCommand:
     async def callback(self, ctx: crescent.Context) -> None:
         """Handle minesweeper command being run by showing grid and buttons."""
         minesweeper_menu = menu.Menu()
+
         screen = MinesweeperScreen(minesweeper_menu, self.grid_size)
         screen_builder = await minesweeper_menu.build_response_async(
             plugin.model.miru, screen
         )
-        await ctx.respond_with_builder(screen_builder)
-        plugin.model.miru.start_view(minesweeper_menu)
+
+        message = await ctx.respond_with_builder(
+          screen_builder, ensure_message=True
+        )
+
+        games[message.id] = screen
+
+        plugin.model.miru.start_view(minesweeper_menu, bind_to=message)
