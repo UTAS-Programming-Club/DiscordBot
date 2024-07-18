@@ -1,7 +1,7 @@
 """This module contains the bot's hangman minigame command."""
 
 # TODO: Support multiplayer where one player provides the word and the other plays the game
-# TODO: Show hanging man to the right of the game instead of the left?
+# TODO: Support versus multiplayer where two people privately play the same game and get scored based on time to win/lose
 
 import crescent
 import hikari
@@ -26,8 +26,9 @@ class HangmanGame:
     user_id: hikari.snowflakes.Snowflake
     word: str
     guesses: list[chr]
+    multiguesser: bool
 
-    def __init__(self, user_id):
+    def __init__(self, user_id: hikari.snowflakes.Snowflake, multiguesser: bool):
         global word_count
         if word_count is None:
             with open(word_file) as f:
@@ -35,6 +36,7 @@ class HangmanGame:
 
         self.user_id = user_id
         self.guesses = []
+        self.multiguesser = multiguesser
 
         line_num = random.randrange(word_count)
         self.word = linecache.getline(word_file, line_num)
@@ -80,7 +82,7 @@ class HangmanGame:
             status += '│   '
         if player_won and 0 < mistake_count < max_mistake_count:
             status += ' 😌'
-        else if mistake_count >= max_mistake_count - 3:
+        elif mistake_count >= max_mistake_count - 3:
             status += ' 😟'
         status += '\n'
 
@@ -153,7 +155,7 @@ async def on_message_create(event: hikari.MessageCreateEvent):
         return
     game_info = games[referenced_message.id]
 
-    if event.message.author.id != game_info.user_id:
+    if not game_info.multiguesser and event.message.author.id != game_info.user_id:
         return
 
     if event.message.content is None:
@@ -191,9 +193,11 @@ class HangmanCommand:
     Implemented by something sensible(somethingsensible).
     """
 
+    multiguesser = crescent.option(bool, 'Allow anyone to guess', default=False)
+
     async def callback(self, ctx: crescent.Context) -> None:
         """Handle hangman command being run by showing the board."""
-        game = HangmanGame(ctx.user.id)
+        game = HangmanGame(ctx.user.id, self.multiguesser)
 
         message = await ctx.respond(
           game.get_current_status(None),
