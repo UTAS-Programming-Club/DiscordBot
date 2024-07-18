@@ -22,7 +22,10 @@ class MockContext:
         """Create mock context, currently only user is mocked."""
         self.user = make_user(app, 1, 'testuser1')
 
-    async def respond(self, output: str, ephemeral: bool = False):
+    async def defer(self, ephemeral: bool = False) -> None:
+        return None
+
+    async def respond(self, output: str, ephemeral: bool = False) -> None:
         """Mock crescent.Context.respond with console."""
         self.message_index += 1
         if ephemeral:
@@ -30,6 +33,7 @@ class MockContext:
         else:
             print(' ', end='')
         print(f'{self.message_index}: {output}')
+        return None
 
     async def edit(self, output: str):
         """Mock crescent.Context.edit with console."""
