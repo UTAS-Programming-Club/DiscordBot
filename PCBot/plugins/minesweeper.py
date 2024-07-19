@@ -3,11 +3,15 @@
 # TODO: Figure out why some chars stop appearing for 14x14 despite being well
 # below the length limit. I tried copying the message and reposting it and hit
 # the same issue so it is not bot specific.
+# TODO: Add messages that check for and prevent exceptions from occurring
+# TODO: Fix back button
+# TODO: Ensure bomb count is capped at grid size * grid_size - 1
 
 import crescent
 import hikari
 import inspect
 import miru
+import random
 import re
 from crescent.ext import docstrings
 from dataclasses import dataclass
@@ -18,11 +22,15 @@ from PCBot.botdata import BotData
 from typing import Awaitable, Callable, Optional
 
 plugin = crescent.Plugin[hikari.GatewayBot, BotData]()
+cell_revealed_chars = [
+  '\N{LARGE YELLOW SQUARE}',
+  '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '\💣'
+]
 
 class MinesweeperGridCellState(Enum):
     COVERED   = 1
     FLAGGED   = 2
-    UNCOVERED = 3
+    REVEALED = 3
 
 
 class MinesweeperScreenStage(Enum):
@@ -43,22 +51,28 @@ class MinesweeperInputMethod(Enum):
 
 @dataclass
 class MinesweeperGridCell:
-    uncovered_char = ' '
-    state = MinesweeperGridCellState.COVERED
+    revealed_char_idx = 0
+    state = MinesweeperGridCellState.REVEALED
 
 
 class MinesweeperGrid:
     """Class to store information about the minesweeper grid."""
     size: int
-    grid: list[list[MinesweeperGridCell]]
+    bomb_count: int
 
-    def __init__(self, size: int):
+    grid: list[list[MinesweeperGridCell]]
+    generated_mines = False
+
+    def __init__(self, size: int, bomb_count: int):
         self.size = size
+        self.bomb_count = bomb_count
 
         self.grid = [
           [MinesweeperGridCell() for column in range(self.size)]
           for row in range(self.size)
         ]
+        # TODO: Remove
+        self._generate_mines(0, 0)
 
     def __str__(self) -> str:
         """Convert a grid into a string."""
@@ -82,6 +96,7 @@ class MinesweeperGrid:
           + ' '.join([chr(a_val + i) for i in range(self.size)])
         )
 
+        global cell_revealed_chars
         for row in range(self.size):
             grid_message += f'\n{row + 1}. '
             for column in range(self.size):
@@ -90,8 +105,10 @@ class MinesweeperGrid:
                     grid_message += '\N{LARGE GREEN SQUARE}'
                 elif grid_cell.state is MinesweeperGridCellState.FLAGGED:
                     grid_message += '🚩'
-                elif grid_cell.state is MinesweeperGridCellState.UNCOVERED:
-                    grid_message += grid_cell.uncovered_char
+                elif grid_cell.state is MinesweeperGridCellState.REVEALED:
+                    grid_message += (
+                      cell_revealed_chars[grid_cell.revealed_char_idx]
+                    )
                 else:
                     raise Exception(f'Unexpected cell state {grid_cell.state}')
                 grid_message += ' '
@@ -122,6 +139,71 @@ class MinesweeperGrid:
         else:
             raise Exception(f'Unexpected cell state {grid_cell.state}')
 
+    def _generate_mines(self, except_row: int, except_column: int) -> None:
+        """Randomly scatters bombs in the grid."""
+        for bomb in range(self.bomb_count):
+            while True:
+                row = random.randrange(self.size)
+                column = random.randrange(self.size)
+
+                grid_cell = self.grid[row][column]
+                if grid_cell.revealed_char_idx < 8:
+                  grid_cell.revealed_char_idx = 9
+                  break
+
+            north_exists = column > 0
+            east_exists = row < self.size - 1
+            south_exists = column < self.size - 1
+            west_exists = row > 0
+
+            north_east_exists = north_exists and east_exists
+            south_east_exists = south_exists and east_exists
+            south_west_exists = south_exists and west_exists
+            north_west_exists = north_exists and west_exists
+
+            if north_exists:
+                north_cell = self.grid[row][column - 1]
+            if north_east_exists:
+                north_east_cell = self.grid[row + 1][column - 1]
+            if east_exists:
+                east_cell = self.grid[row + 1][column]
+            if south_east_exists:
+                south_east_cell = self.grid[row + 1][column + 1]
+            if south_exists:
+                south_cell = self.grid[row][column + 1]
+            if south_west_exists:
+                south_west_cell = self.grid[row - 1][column + 1]
+            if west_exists:
+                west_cell = self.grid[row - 1][column]
+            if north_west_exists:
+                north_west_cell = self.grid[row - 1][column - 1]
+
+            if north_exists and north_cell.revealed_char_idx < 8:
+                north_cell.revealed_char_idx += 1
+            if north_east_exists and north_east_cell.revealed_char_idx < 8:
+                north_east_cell.revealed_char_idx += 1
+            if east_exists and east_cell.revealed_char_idx < 8:
+                east_cell.revealed_char_idx += 1
+            if south_east_exists and south_east_cell.revealed_char_idx < 8:
+                south_east_cell.revealed_char_idx += 1
+            if south_exists and south_cell.revealed_char_idx < 8:
+                south_cell.revealed_char_idx += 1
+            if south_west_exists and south_west_cell.revealed_char_idx < 8:
+                south_west_cell.revealed_char_idx += 1
+            if west_exists and west_cell.revealed_char_idx < 8:
+                west_cell.revealed_char_idx += 1
+            if north_west_exists and north_west_cell.revealed_char_idx < 8:
+                north_west_cell.revealed_char_idx += 1
+
+        self.generated_mines = True
+
+    def reveal_cell(self, row: int, column: int) -> None:
+        if row >= self.size or column >= self.size:
+            raise Exception(f'Cell ({row}, {column}) is out of range')
+
+        if not self.generated_mines:
+            self._generate_mines(row, column)
+        # TODO: Implement
 
 class MinesweeperGame:
     grid: MinesweeperGrid
@@ -131,8 +213,8 @@ class MinesweeperGame:
     last_option: Optional[MinesweeperOption] = None
     last_input_method: Optional[MinesweeperInputMethod] = None
 
-    def __init__(self, grid_size: int):
-        self.grid = MinesweeperGrid(grid_size)
+    def __init__(self, grid_size: int, bomb_count: int):
+        self.grid = MinesweeperGrid(grid_size, bomb_count)
 
     def make_move(
       self, row: int, column: int, option: MinesweeperOption,
@@ -163,7 +245,6 @@ class MinesweeperGame:
             and self.last_input_method is not None):
                 status += '\n\nThe last move to was to '
 
-                # TODO: Split into flag and unflag cases
                 if self.last_option is MinesweeperOption.FLAG:
                     flagged = self.grid.get_cell_flagged_status(
                       self.last_row, self.last_column
@@ -219,9 +300,9 @@ class MinesweeperScreen(menu.Screen):
 
     game: MinesweeperGame
 
-    def __init__(self, menu: menu.Menu, grid_size: int):
+    def __init__(self, menu: menu.Menu, grid_size: int, bomb_count: int):
         super().__init__(menu)
-        self.game = MinesweeperGame(grid_size)
+        self.game = MinesweeperGame(grid_size, bomb_count)
 
     async def build_content(self) -> menu.ScreenContent:
         if not self.created_initial_buttons:
@@ -377,7 +458,9 @@ class MinesweeperCommand:
         """Handle minesweeper command being run by showing grid and buttons."""
         minesweeper_menu = menu.Menu()
 
-        screen = MinesweeperScreen(minesweeper_menu, self.grid_size)
+        screen = MinesweeperScreen(
+          minesweeper_menu, self.grid_size, self.bomb_count
+        )
         screen_builder = await minesweeper_menu.build_response_async(
             plugin.model.miru, screen
         )
