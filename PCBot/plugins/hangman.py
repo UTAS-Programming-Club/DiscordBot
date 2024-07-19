@@ -164,7 +164,7 @@ async def on_message_create(event: hikari.MessageCreateEvent):
 
     if len(event.message.content) != 1:
         return
-    message_char = message_text.casefold().replace(' ', '')[0]
+    message_char = message_text.casefold().replace(' ', '')[0].lower()
 
     if message_char not in string.ascii_lowercase:
         return
