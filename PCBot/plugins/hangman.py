@@ -10,6 +10,7 @@ import random
 import string
 from crescent.ext import docstrings
 from colorama import Fore, Style
+from hikari.channels import ChannelType
 from typing import Optional
 
 plugin = crescent.Plugin[hikari.GatewayBot, None]()
@@ -151,13 +152,14 @@ games: dict[hikari.snowflakes.Snowflake, HangmanGame] = {}
 @crescent.event
 async def on_message_create(event: hikari.MessageCreateEvent):
     """Handle replies to hangman messages containing letter guesses."""
-    if event.channel_id in games:
-        game_message = games[event.channel_id].message
-    elif event.message.referenced_message is not None:
+    if event.message.referenced_message is not None:
         game_message = event.message.referenced_message
-        if game_message.id not in games:
-            return
+    elif event.channel_id in games:
+        game_message = games[event.channel_id].message
     else:
+        return
+
+    if game_message.id not in games:
         return
     game_info = games[game_message.id]
 
@@ -205,13 +207,20 @@ class HangmanCommand:
         """Handle hangman command being run by showing the board."""
         game = HangmanGame(ctx.user.id, self.multiguesser)
 
-        # TODO: Ignore self.thread if already in a thread to avoid error
-        if self.thread:
+        thread = ctx.app.cache.get_thread(ctx.channel_id)
+        if thread is None:
+            thread = await ctx.app.rest.fetch_channel(ctx.channel_id)
+        in_thread = (
+          thread is not None and thread.type is ChannelType.GUILD_PUBLIC_THREAD
+          and thread.name == 'Hangman'
+        )
+
+        if not in_thread and self.thread:
             # TODO: Avoid this message
             await ctx.respond('Starting hangman game in thread!', ephemeral=True)
 
-            thread = await ctx.app.rest.create_thread(ctx.channel_id,
-              hikari.channels.ChannelType.GUILD_PUBLIC_THREAD, 'Hangman'
+            thread = await ctx.app.rest.create_thread(
+              ctx.channel_id, ChannelType.GUILD_PUBLIC_THREAD, 'Hangman'
             )
             games[thread.id] = game
 
@@ -221,7 +230,7 @@ class HangmanCommand:
               game.get_current_status(), ensure_message=True
             )
 
-            # TODO: Check if channel is a thread and if so add this
-            # games[thread.id] = game
+            if in_thread:
+                games[thread.id] = game
 
         games[game.message.id] = game
