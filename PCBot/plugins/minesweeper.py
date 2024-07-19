@@ -1,5 +1,9 @@
 """This module contains the bot's minesweeper minigame command."""
 
+# TODO: Figure out why some chars stop appearing for 14x14 despite being well
+# below the length limit. I tried copying the message and reposting it and hit
+# the same issue so it is not bot specific.
+
 import crescent
 import hikari
 import inspect
@@ -14,6 +18,12 @@ from PCBot.botdata import BotData
 from typing import Awaitable, Callable, Optional
 
 plugin = crescent.Plugin[hikari.GatewayBot, BotData]()
+
+class MinesweeperGridCellState(Enum):
+    COVERED   = 1
+    FLAGGED   = 2
+    UNCOVERED = 3
+
 
 class MinesweeperScreenStage(Enum):
     OPTION = 1
@@ -32,9 +42,23 @@ class MinesweeperInputMethod(Enum):
 
 
 @dataclass
+class MinesweeperGridCell:
+    uncovered_char = ' '
+    state = MinesweeperGridCellState.COVERED
+
+
 class MinesweeperGrid:
     """Class to store information about the minesweeper grid."""
     size: int
+    grid: list[list[MinesweeperGridCell]]
+
+    def __init__(self, size: int):
+        self.size = size
+
+        self.grid = [
+          [MinesweeperGridCell() for column in range(self.size)]
+          for row in range(self.size)
+        ]
 
     def __str__(self) -> str:
         """Convert a grid into a string."""
@@ -57,6 +81,20 @@ class MinesweeperGrid:
           f'\n{letter_indent}'
           + ' '.join([chr(a_val + i) for i in range(self.size)])
         )
+
+        for row in range(self.size):
+            grid_message += f'\n{row + 1}. '
+            for column in range(self.size):
+                grid_cell = self.grid[row][column]
+                if grid_cell.state is MinesweeperGridCellState.COVERED:
+                    grid_message += '\N{LARGE GREEN SQUARE}'
+                elif grid_cell.state is MinesweeperGridCellState.FLAGGED:
+                    grid_message += '🚩'
+                elif grid_cell.state is MinesweeperGridCellState.UNCOVERED:
+                    grid_message += grid_cell.uncovered_char}
+                else:
+                    raise Exception(f'Unknown cell state {grid_cell.state}')
+                grid_message += ' '
 
         return grid_message
 
@@ -119,7 +157,9 @@ class MinesweeperGame:
                     )
                 status += '.'
         
-        return status + f'\n{self.grid}'
+        # Discord trims whitespace only lines and new lines preceeding them
+        # but not if they contain markup like italics
+        return status + f'\n{self.grid}\n_ _'
 
 
 def create_button(
@@ -292,7 +332,7 @@ class MinesweeperCommand:
     """
 
     grid_size = crescent.option(
-        int, 'Size of minesweeper grid', min_value=2, default=9, max_value=24
+        int, 'Size of minesweeper grid', min_value=2, default=9, max_value=13
     )
     bomb_count = crescent.option(
         int, 'Number of bombs in the grid', min_value=1, default=5, max_value=80
