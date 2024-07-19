@@ -31,7 +31,10 @@ class HangmanGame:
     guesses: list[chr]
     multiguesser: bool
 
-    def __init__(self, user_id: hikari.snowflakes.Snowflake, multiguesser: bool):
+    def __init__(
+      self, user_id: hikari.snowflakes.Snowflake, multiguesser: bool
+    ):
+        """Start a hangman mode by randomly choosing a word from the file."""
         global word_count
         if word_count is None:
             with open(word_file) as f:
@@ -110,16 +113,16 @@ class HangmanGame:
 
         # Line 5: "│    │"
         if mistake_count >= 1:
-          status += '│'
+            status += '│'
         if mistake_count >= max_mistake_count - 1:
-          status += '    │'
+            status += '    │'
         status += '\n'
 
         # Line 6: "│   ╱ ╲  RESULT STRING 1"
         if mistake_count >= 1:
-          status += '│   '
+            status += '│   '
         if mistake_count >= max_mistake_count:
-          status += '╱ ╲  '
+            status += '╱ ╲  '
         elif mistake_count >= 1:
             status += ' ' * len('╱ ╲  ')
 
@@ -137,10 +140,10 @@ class HangmanGame:
             status += "        The answer was: '" + self.word + "'."
 
         if (self.message is not None and
-          (player_won or mistake_count >= max_mistake_count)):
-                global games
-                games.pop(self.message.id)
-                games.pop(self.message.channel_id)
+             (player_won or mistake_count >= max_mistake_count)):
+            global games
+            games.pop(self.message.id)
+            games.pop(self.message.channel_id)
 
         return status + '```'
 
@@ -163,7 +166,8 @@ async def on_message_create(event: hikari.MessageCreateEvent):
         return
     game_info = games[game_message.id]
 
-    if not game_info.multiguesser and event.message.author.id != game_info.user_id:
+    if (not game_info.multiguesser
+          and event.message.author.id != game_info.user_id):
         return
 
     if event.message.content is None:
@@ -199,9 +203,13 @@ class HangmanCommand:
     Implemented by something sensible(somethingsensible).
     """
 
-    multiguesser = crescent.option(bool, 'Allow anyone to guess', default=False)
+    multiguesser = crescent.option(
+      bool, 'Allow anyone to guess', default=False
+    )
 
-    thread = crescent.option(bool, 'Automatically create a thread', default=False)
+    thread = crescent.option(
+      bool, 'Automatically create a thread', default=False
+    )
 
     async def callback(self, ctx: crescent.Context) -> None:
         """Handle hangman command being run by showing the board."""
@@ -217,7 +225,9 @@ class HangmanCommand:
 
         if not in_thread and self.thread:
             # TODO: Avoid this message
-            await ctx.respond('Starting hangman game in thread!', ephemeral=True)
+            await ctx.respond(
+              'Starting hangman game in thread!', ephemeral=True
+            )
 
             thread = await ctx.app.rest.create_thread(
               ctx.channel_id, ChannelType.GUILD_PUBLIC_THREAD, 'Hangman'
