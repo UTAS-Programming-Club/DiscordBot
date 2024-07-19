@@ -98,6 +98,18 @@ class MinesweeperGrid:
 
         return grid_message
 
+    def get_cell_flagged_status(self, row: int, column: int) -> bool:
+        if row >= self.size or column >= self.size:
+            raise Exception(f'Cell ({row}, {column}) is out of range')
+
+        grid_cell = self.grid[row][column]
+        if grid_cell.state is MinesweeperGridCellState.COVERED:
+            return False
+        elif grid_cell.state is MinesweeperGridCellState.FLAGGED:
+            return True
+        else:
+            raise Exception(f'Unexpected cell state {grid_cell.state}')
+
     def toggle_cell_flagged_status(self, row: int, column: int) -> None:
         if row >= self.size or column >= self.size:
             raise Exception(f'Cell ({row}, {column}) is out of range')
@@ -153,7 +165,13 @@ class MinesweeperGame:
 
                 # TODO: Split into flag and unflag cases
                 if self.last_option is MinesweeperOption.FLAG:
-                    status += '(un)flag'
+                    flagged = self.grid.get_cell_flagged_status(
+                      self.last_row, self.last_column
+                    )
+                    if flagged:
+                        status += 'flag'
+                    else:
+                        status += 'unflag'
                 elif self.last_option is MinesweeperOption.REVEAL:
                     status += 'reveal'
                 else:
