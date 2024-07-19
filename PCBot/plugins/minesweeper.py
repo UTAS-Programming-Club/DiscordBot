@@ -125,11 +125,14 @@ class MinesweeperScreen(menu.Screen):
           content=self.game.get_current_status()
         )
 
+    async def reload(self) -> None:
+        await self.menu.update_message(await self.build_content())
+
     async def show_option_buttons(self) -> None:
         self.menu.clear_items()
         self.menu.add_item(create_button('(Un)flag', self.flag_pressed))
         self.menu.add_item(create_button('Reveal', self.reveal_pressed))
-        await self.menu.update_message(await self.build_content())
+        await self.reload()
 
     async def show_input_buttons(self) -> None:
         self.menu.clear_items()
@@ -149,7 +152,7 @@ class MinesweeperScreen(menu.Screen):
           'Back', self.back_pressed, style=hikari.ButtonStyle.DANGER
         ))
 
-        await self.menu.update_message(await self.build_content())
+        await self.reload()
 
     async def flag_pressed(
       self, ctx: miru.ViewContext, button: menu.ScreenButton
@@ -240,7 +243,7 @@ async def on_message_create(event: hikari.MessageCreateEvent):
         return
 
     game_info.game.make_move(column, row, option, MinesweeperInputMethod.REPLY)
-    await game_info.show_option_buttons()
+    await game_info.reload()
 
     await event.message.delete()
 
