@@ -32,19 +32,51 @@ class MinesweeperInputMethod(Enum):
 
 
 @dataclass
+class MinesweeperGrid:
+    """Class to store information about the minesweeper grid."""
+    size: int
+
+    def __str__(self) -> str:
+        """Convert a grid into a string."""
+        # It took ages to find a way to align the grid on discord, the best
+        # method found uses a list for the row numbers and regional indicators
+        # for the letters. Then to align letters to the grid that line needs to
+        # start with the same indent as the list indices which were found by
+        # trial and error for single and double digits.
+        if self.size <= 9:
+            # Braille pattern space, thin space, six-per-em space
+            letter_indent = '⠀  '
+        elif self.size <= 99:
+            # Braille pattern space, figure space, thin space, six-per-em space
+            letter_indent = '⠀   '
+        else:
+            raise Exception(f'First line indent for {self.size} not known')
+
+        a_val = ord('🇦')
+        grid_message = (
+          f'\n{letter_indent}'
+          + ' '.join([chr(a_val + i) for i in range(self.size)])
+        )
+
+        return grid_message
+
+
 class MinesweeperGame:
-    grid_size: int
+    grid: MinesweeperGrid
 
     last_column: Optional[int] = None # Letter
     last_row: Optional[int] = None    # Number
     last_option: Optional[MinesweeperOption] = None
     last_input_method: Optional[MinesweeperInputMethod] = None
 
+    def __init__(self, grid_size: int):
+        self.grid = MinesweeperGrid(grid_size)
+
     def make_move(
       self, column: int, row: int, option: MinesweeperOption,
       input_method: MinesweeperInputMethod
     ) -> None:
-        if column >= self.grid_size or row >= self.grid_size:
+        if column >= self.grid.grid_size or row >= self.grid.grid_size:
             return
 
         self.last_column = column
@@ -87,7 +119,7 @@ class MinesweeperGame:
                     )
                 status += '.'
         
-        return status
+        return status + f'\n{self.grid}'
 
 
 def create_button(
