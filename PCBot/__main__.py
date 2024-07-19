@@ -5,6 +5,7 @@ import crescent
 import hikari
 import miru
 import sys
+from hikari.intents import Intents
 from PCBot.botdata import (
     BotData, token_path, lavalink_password_path,
     guild_id_path, get_token_file_path
@@ -37,8 +38,8 @@ with open(get_token_file_path(guild_id_path)) as f:
 # default_guild is needed to get register_commands to do a guild specific push
 bot = hikari.GatewayBot(
     token, force_color=True,
-    intents=hikari.intents.Intents.GUILDS | hikari.Intents.GUILD_MESSAGES
-            | hikari.Intents.GUILD_VOICE_STATES
+    intents=Intents.GUILDS | Intents.GUILD_MESSAGES
+            | hikari.Intents.GUILD_VOICE_STATES | Intents.MESSAGE_CONTENT
 )
 miru_client = miru.Client(bot)
 
