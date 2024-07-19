@@ -91,7 +91,7 @@ class MinesweeperGrid:
                 elif grid_cell.state is MinesweeperGridCellState.FLAGGED:
                     grid_message += '🚩'
                 elif grid_cell.state is MinesweeperGridCellState.UNCOVERED:
-                    grid_message += grid_cell.uncovered_char}
+                    grid_message += grid_cell.uncovered_char
                 else:
                     raise Exception(f'Unknown cell state {grid_cell.state}')
                 grid_message += ' '
@@ -114,7 +114,7 @@ class MinesweeperGame:
       self, column: int, row: int, option: MinesweeperOption,
       input_method: MinesweeperInputMethod
     ) -> None:
-        if column >= self.grid.grid_size or row >= self.grid.grid_size:
+        if column >= self.grid.size or row >= self.grid.size:
             return
 
         self.last_column = column
@@ -209,7 +209,7 @@ class MinesweeperScreen(menu.Screen):
     async def show_input_buttons(self) -> None:
         self.menu.clear_items()
 
-        for i in range(self.game.grid_size):
+        for i in range(self.game.grid.size):
             if self.state == MinesweeperScreenStage.LETTER:
                 label = str(chr(ord('A') + i))
             elif self.state == MinesweeperScreenStage.NUMBER:
@@ -307,11 +307,11 @@ async def on_message_create(event: hikari.MessageCreateEvent):
         option = MinesweeperOption.REVEAL
 
     column = ord(message_groups[1].upper()[0]) - ord('A')
-    if column >= game_info.game.grid_size:
+    if column >= game_info.game.size:
         return
 
     row = int(message_groups[2])
-    if row >= game_info.game.grid_size:
+    if row >= game_info.game.size:
         return
 
     game_info.game.make_move(column, row, option, MinesweeperInputMethod.REPLY)
