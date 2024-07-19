@@ -10,6 +10,7 @@ import random
 import string
 from crescent.ext import docstrings
 from colorama import Fore, Style
+from hikari.channels import ChannelType
 from typing import Optional
 
 plugin = crescent.Plugin[hikari.GatewayBot, None]()
@@ -24,6 +25,8 @@ class HangmanGame:
     """Maintain and allow guesses for a hangman game."""
 
     user_id: hikari.snowflakes.Snowflake
+    message: Optional[hikari.Message] = None
+
     word: str
     guesses: list[chr]
     multiguesser: bool
@@ -52,9 +55,7 @@ class HangmanGame:
         else:
             return False
 
-    def get_current_status(
-        self, message_id: Optional[hikari.snowflakes.Snowflake]
-    ) -> str:
+    def get_current_status(self) -> str:
         """Produce a string to describe the current state of the game."""
         mistake_count = len([
           letter for letter in self.guesses if letter not in self.word
@@ -128,14 +129,18 @@ class HangmanGame:
 
         if player_won:
             status += 'You have won the game!'
-            if message_id is not None:
-                games.pop(message_id)
 
         # Line 7: "┴        RESULT STRING 2"
         if mistake_count >= 1:
             status += '\n┴'
         if mistake_count >= max_mistake_count:
             status += "        The answer was: '" + self.word + "'."
+
+        if (self.message is not None and
+          (player_won or mistake_count >= max_mistake_count)):
+                global games
+                games.pop(self.message.id)
+                games.pop(self.message.channel_id)
 
         return status + '```'
 
@@ -147,13 +152,16 @@ games: dict[hikari.snowflakes.Snowflake, HangmanGame] = {}
 @crescent.event
 async def on_message_create(event: hikari.MessageCreateEvent):
     """Handle replies to hangman messages containing letter guesses."""
-    if event.message.referenced_message is None:
+    if event.message.referenced_message is not None:
+        game_message = event.message.referenced_message
+    elif event.channel_id in games:
+        game_message = games[event.channel_id].message
+    else:
         return
-    referenced_message = event.message.referenced_message
 
-    if referenced_message.id not in games:
+    if game_message.id not in games:
         return
-    game_info = games[referenced_message.id]
+    game_info = games[game_message.id]
 
     if not game_info.multiguesser and event.message.author.id != game_info.user_id:
         return
@@ -176,9 +184,7 @@ async def on_message_create(event: hikari.MessageCreateEvent):
             flags=hikari.MessageFlag.EPHEMERAL
         )
 
-    await referenced_message.edit(
-      game_info.get_current_status(referenced_message.id)
-    )
+    await game_message.edit(game_info.get_current_status())
     await event.message.delete()
 
 
@@ -195,13 +201,36 @@ class HangmanCommand:
 
     multiguesser = crescent.option(bool, 'Allow anyone to guess', default=False)
 
+    thread = crescent.option(bool, 'Automatically create a thread', default=False)
+
     async def callback(self, ctx: crescent.Context) -> None:
         """Handle hangman command being run by showing the board."""
         game = HangmanGame(ctx.user.id, self.multiguesser)
 
-        message = await ctx.respond(
-          game.get_current_status(None),
-          ensure_message=True
+        thread = ctx.app.cache.get_thread(ctx.channel_id)
+        if thread is None:
+            thread = await ctx.app.rest.fetch_channel(ctx.channel_id)
+        in_thread = (
+          thread is not None and thread.type is ChannelType.GUILD_PUBLIC_THREAD
+          and thread.name == 'Hangman'
         )
 
-        games[message.id] = game
+        if not in_thread and self.thread:
+            # TODO: Avoid this message
+            await ctx.respond('Starting hangman game in thread!', ephemeral=True)
+
+            thread = await ctx.app.rest.create_thread(
+              ctx.channel_id, ChannelType.GUILD_PUBLIC_THREAD, 'Hangman'
+            )
+            games[thread.id] = game
+
+            game.message = await thread.send(game.get_current_status())
+        else:
+            game.message = await ctx.respond(
+              game.get_current_status(), ensure_message=True
+            )
+
+            if in_thread:
+                games[thread.id] = game
+
+        games[game.message.id] = game
