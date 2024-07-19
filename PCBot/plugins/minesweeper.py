@@ -93,10 +93,22 @@ class MinesweeperGrid:
                 elif grid_cell.state is MinesweeperGridCellState.UNCOVERED:
                     grid_message += grid_cell.uncovered_char
                 else:
-                    raise Exception(f'Unknown cell state {grid_cell.state}')
+                    raise Exception(f'Unexpected cell state {grid_cell.state}')
                 grid_message += ' '
 
         return grid_message
+
+    def toggle_cell_flagged_status(self, row: int, column: int) -> None:
+        if row >= self.size or column >= self.size:
+            raise Exception(f'Cell ({row}, {column}) is out of range')
+
+        grid_cell = self.grid[row][column]
+        if grid_cell.state is MinesweeperGridCellState.COVERED:
+            grid_cell.state = MinesweeperGridCellState.FLAGGED
+        elif grid_cell.state is MinesweeperGridCellState.FLAGGED:
+            grid_cell.state = MinesweeperGridCellState.COVERED
+        else:
+            raise Exception(f'Unexpected cell state {grid_cell.state}')
 
 
 class MinesweeperGame:
@@ -111,16 +123,21 @@ class MinesweeperGame:
         self.grid = MinesweeperGrid(grid_size)
 
     def make_move(
-      self, column: int, row: int, option: MinesweeperOption,
+      self, row: int, column: int, option: MinesweeperOption,
       input_method: MinesweeperInputMethod
     ) -> None:
-        if column >= self.grid.size or row >= self.grid.size:
+        if row >= self.grid.size or column >= self.grid.size:
             return
 
         self.last_column = column
         self.last_row = row
         self.last_option = option
         self.last_input_method = input_method
+
+        if option is MinesweeperOption.FLAG:
+            self.grid.toggle_cell_flagged_status(row, column)
+        else:
+            raise Exception(f'Unexpected input option {option}')
 
     def get_current_status(self) -> str:
         status = inspect.cleandoc(
@@ -145,7 +162,7 @@ class MinesweeperGame:
                     )
 
                 last_column_letter = chr(ord('A') + self.last_column)
-                status += f' cell {last_column_letter}{self.last_row} via '
+                status += f' cell {last_column_letter}{self.last_row + 1} via '
 
                 if self.last_input_method is MinesweeperInputMethod.SCREEN:
                     status += 'the buttons'
@@ -213,7 +230,7 @@ class MinesweeperScreen(menu.Screen):
             if self.state == MinesweeperScreenStage.LETTER:
                 label = str(chr(ord('A') + i))
             elif self.state == MinesweeperScreenStage.NUMBER:
-                label = str(i)
+                label = str(i + 1)
             else:
                 raise Exception(
                   f'Invalid state {self.state} found while updating buttons'
@@ -263,9 +280,9 @@ class MinesweeperScreen(menu.Screen):
             self.letter = ord(button.label[0]) - ord('A')
             await self.show_input_buttons()
         elif self.state == MinesweeperScreenStage.NUMBER:
-            number = int(button.label[0])
+            number = int(button.label) - 1
             self.game.make_move(
-              self.letter, number, self.option, MinesweeperInputMethod.SCREEN
+              number, self.letter, self.option, MinesweeperInputMethod.SCREEN
             )
             self.state = MinesweeperScreenStage.OPTION
             self.option = None
@@ -307,14 +324,14 @@ async def on_message_create(event: hikari.MessageCreateEvent):
         option = MinesweeperOption.REVEAL
 
     column = ord(message_groups[1].upper()[0]) - ord('A')
-    if column >= game_info.game.size:
+    if column >= game_info.game.grid.size:
         return
 
-    row = int(message_groups[2])
-    if row >= game_info.game.size:
+    row = int(message_groups[2]) - 1
+    if row >= game_info.game.grid.size:
         return
 
-    game_info.game.make_move(column, row, option, MinesweeperInputMethod.REPLY)
+    game_info.game.make_move(row, column, option, MinesweeperInputMethod.REPLY)
     await game_info.reload()
 
     await event.message.delete()
