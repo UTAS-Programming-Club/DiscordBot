@@ -6,6 +6,7 @@
 # TODO: Add messages that check for and prevent exceptions from occurring
 # TODO: Fix back button
 # TODO: Ensure bomb count is capped at grid size * grid_size - 1
+# TODO: Check if game is over
 
 import crescent
 import hikari
@@ -30,7 +31,7 @@ cell_revealed_chars = [
 class MinesweeperGridCellState(Enum):
     COVERED   = 1
     FLAGGED   = 2
-    REVEALED = 3
+    REVEALED  = 3
 
 
 class MinesweeperScreenStage(Enum):
@@ -52,7 +53,7 @@ class MinesweeperInputMethod(Enum):
 @dataclass
 class MinesweeperGridCell:
     revealed_char_idx = 0
-    state = MinesweeperGridCellState.REVEALED
+    state = MinesweeperGridCellState.COVERED
 
     def make_bomb(self) -> bool:
         was_bomb = self.revealed_char_idx == 9
@@ -84,8 +85,6 @@ class MinesweeperGrid:
           [MinesweeperGridCell() for column in range(self.size)]
           for row in range(self.size)
         ]
-        # TODO: Remove
-        self._generate_mines(0, 0)
 
     def __str__(self) -> str:
         """Convert a grid into a string."""
@@ -186,13 +185,35 @@ class MinesweeperGrid:
 
         self.generated_mines = True
 
+    def get_cell_revealed_status(self, row: int, column: int) -> bool:
+        if row >= self.size or column >= self.size:
+            raise Exception(f'Cell ({row}, {column}) is out of range')
+
+        grid_cell = self.grid[row][column]
+        if grid_cell.state is MinesweeperGridCellState.COVERED:
+            return False
+        elif grid_cell.state is MinesweeperGridCellState.REVEALED:
+            return True
+        else:
+            raise Exception(f'Unexpected cell state {grid_cell.state}')
+
     def reveal_cell(self, row: int, column: int) -> None:
         if row >= self.size or column >= self.size:
             raise Exception(f'Cell ({row}, {column}) is out of range')
 
+        grid_cell = self.grid[row][column]
+        if grid_cell.state is MinesweeperGridCellState.FLAGGED:
+            raise Exception(
+              f'Cell ({row}, {column}) is flagged so cannot be uncovered'
+            )
+        elif grid_cell.state is MinesweeperGridCellState.REVEALED:
+            raise Exception(f'Cell ({row}, {column}) is already revealed')
+
         if not self.generated_mines:
             self._generate_mines(row, column)
-        # TODO: Implement
+
+        grid_cell.state = MinesweeperGridCellState.REVEALED
+
 
 class MinesweeperGame:
     grid: MinesweeperGrid
@@ -218,9 +239,15 @@ class MinesweeperGame:
         self.last_input_method = input_method
 
         if option is MinesweeperOption.FLAG:
+            # TODO: Report
+            if self.grid.get_cell_revealed_status(row, column):
+                return
             self.grid.toggle_cell_flagged_status(row, column)
         else:
-            raise Exception(f'Unexpected input option {option}')
+            # TODO: Report
+            if self.grid.get_cell_flagged_status(row, column):
+                return
+            self.grid.reveal_cell(row, column)
 
     def get_current_status(self) -> str:
         status = inspect.cleandoc(
