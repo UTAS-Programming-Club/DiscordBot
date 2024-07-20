@@ -4,7 +4,6 @@
 # below the length limit. I tried copying the message and reposting it and hit
 # the same issue so it is not bot specific.
 # TODO: Add messages that check for and prevent exceptions from occurring
-# TODO: Fix back button
 # TODO: Ensure bomb count is capped at grid size * grid_size - 1
 # TODO: Check if game is over
 
@@ -41,8 +40,11 @@ class MinesweeperScreenStage(Enum):
 
 
 class MinesweeperOption(Enum):
-    FLAG   = 1
-    REVEAL = 2
+    FLAG                      = 1
+    REVEAL                    = 2
+    FAILED_FLAG_BY_REVEALED   = 3
+    FAILED_REVEAL_BY_FLAGGED  = 4
+    FAILED_REVEAL_BY_REVEALED = 5
 
 
 class MinesweeperInputMethod(Enum):
@@ -132,7 +134,10 @@ class MinesweeperGrid:
             raise Exception(f'Cell ({row}, {column}) is out of range')
 
         grid_cell = self.grid[row][column]
-        if grid_cell.state is MinesweeperGridCellState.COVERED:
+        if grid_cell.state in {
+          MinesweeperGridCellState.COVERED,
+          MinesweeperGridCellState.REVEALED
+        }:
             return False
         elif grid_cell.state is MinesweeperGridCellState.FLAGGED:
             return True
@@ -190,7 +195,10 @@ class MinesweeperGrid:
             raise Exception(f'Cell ({row}, {column}) is out of range')
 
         grid_cell = self.grid[row][column]
-        if grid_cell.state is MinesweeperGridCellState.COVERED:
+        if grid_cell.state in {
+          MinesweeperGridCellState.COVERED,
+          MinesweeperGridCellState.FLAGGED
+        }:
             return False
         elif grid_cell.state is MinesweeperGridCellState.REVEALED:
             return True
@@ -239,15 +247,20 @@ class MinesweeperGame:
         self.last_input_method = input_method
 
         if option is MinesweeperOption.FLAG:
-            # TODO: Report
             if self.grid.get_cell_revealed_status(row, column):
+                self.last_option = MinesweeperOption.FAILED_FLAG_BY_REVEALED
                 return
             self.grid.toggle_cell_flagged_status(row, column)
-        else:
-            # TODO: Report
+        elif option is MinesweeperOption.REVEAL:
             if self.grid.get_cell_flagged_status(row, column):
+                self.last_option = MinesweeperOption.FAILED_REVEAL_BY_FLAGGED
+                return
+            if self.grid.get_cell_revealed_status(row, column):
+                self.last_option = MinesweeperOption.FAILED_REVEAL_BY_REVEALED
                 return
             self.grid.reveal_cell(row, column)
+        else:
+            raise Exception(f'Unexpected option {option}')
 
     def get_current_status(self) -> str:
         status = inspect.cleandoc(
@@ -269,8 +282,16 @@ class MinesweeperGame:
                         status += 'flag'
                     else:
                         status += 'unflag'
+                elif (self.last_option is
+                       MinesweeperOption.FAILED_FLAG_BY_REVEALED):
+                    status += 'try to flag'
                 elif self.last_option is MinesweeperOption.REVEAL:
                     status += 'reveal'
+                elif self.last_option in {
+                  MinesweeperOption.FAILED_REVEAL_BY_FLAGGED,
+                  MinesweeperOption.FAILED_REVEAL_BY_REVEALED
+                }:
+                    status += 'try to reveal'
                 else:
                     raise Exception(
                       f'Invalid input option {self.last_option} used.'
