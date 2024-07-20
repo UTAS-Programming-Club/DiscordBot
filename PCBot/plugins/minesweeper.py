@@ -54,6 +54,19 @@ class MinesweeperGridCell:
     revealed_char_idx = 0
     state = MinesweeperGridCellState.REVEALED
 
+    def make_bomb(self) -> bool:
+        was_bomb = self.revealed_char_idx == 9
+        self.revealed_char_idx = 9
+        return not was_bomb
+
+    def increment_adjacent_bomb_count(self) -> None:
+        if self.revealed_char_idx == 9:
+            pass
+        elif self.revealed_char_idx <= 7:
+            self.revealed_char_idx += 1
+        else:
+            raise Exception('Cannot increment adjacent bomb count past 8')
+
 
 class MinesweeperGrid:
     """Class to store information about the minesweeper grid."""
@@ -146,54 +159,30 @@ class MinesweeperGrid:
                 row = random.randrange(self.size)
                 column = random.randrange(self.size)
 
-                grid_cell = self.grid[row][column]
-                if grid_cell.revealed_char_idx < 8:
-                  grid_cell.revealed_char_idx = 9
+                if self.grid[row][column].make_bomb():
                   break
 
-            north_exists = column > 0
-            east_exists = row < self.size - 1
-            south_exists = column < self.size - 1
-            west_exists = row > 0
-
-            north_east_exists = north_exists and east_exists
-            south_east_exists = south_exists and east_exists
-            south_west_exists = south_exists and west_exists
-            north_west_exists = north_exists and west_exists
+            north_exists = row > 0
+            east_exists = column < self.size - 1
+            south_exists = row < self.size - 1
+            west_exists = column > 0
 
             if north_exists:
-                north_cell = self.grid[row][column - 1]
-            if north_east_exists:
-                north_east_cell = self.grid[row + 1][column - 1]
+                self.grid[row - 1][column].increment_adjacent_bomb_count()
+            if north_exists and east_exists:
+                self.grid[row - 1][column + 1].increment_adjacent_bomb_count()
             if east_exists:
-                east_cell = self.grid[row + 1][column]
-            if south_east_exists:
-                south_east_cell = self.grid[row + 1][column + 1]
+                self.grid[row][column + 1].increment_adjacent_bomb_count()
+            if south_exists and east_exists:
+                self.grid[row + 1][column + 1].increment_adjacent_bomb_count()
             if south_exists:
-                south_cell = self.grid[row][column + 1]
-            if south_west_exists:
-                south_west_cell = self.grid[row - 1][column + 1]
+                self.grid[row + 1][column].increment_adjacent_bomb_count()
+            if south_exists and west_exists:
+                self.grid[row + 1][column - 1].increment_adjacent_bomb_count()
             if west_exists:
-                west_cell = self.grid[row - 1][column]
-            if north_west_exists:
-                north_west_cell = self.grid[row - 1][column - 1]
-
-            if north_exists and north_cell.revealed_char_idx < 8:
-                north_cell.revealed_char_idx += 1
-            if north_east_exists and north_east_cell.revealed_char_idx < 8:
-                north_east_cell.revealed_char_idx += 1
-            if east_exists and east_cell.revealed_char_idx < 8:
-                east_cell.revealed_char_idx += 1
-            if south_east_exists and south_east_cell.revealed_char_idx < 8:
-                south_east_cell.revealed_char_idx += 1
-            if south_exists and south_cell.revealed_char_idx < 8:
-                south_cell.revealed_char_idx += 1
-            if south_west_exists and south_west_cell.revealed_char_idx < 8:
-                south_west_cell.revealed_char_idx += 1
-            if west_exists and west_cell.revealed_char_idx < 8:
-                west_cell.revealed_char_idx += 1
-            if north_west_exists and north_west_cell.revealed_char_idx < 8:
-                north_west_cell.revealed_char_idx += 1
+                self.grid[row][column - 1].increment_adjacent_bomb_count()
+            if north_exists and west_exists:
+                self.grid[row - 1][column - 1].increment_adjacent_bomb_count()
 
         self.generated_mines = True
 
