@@ -6,10 +6,10 @@
 # TODO: Add messages that check for and prevent exceptions from occurring
 # TODO: Ensure bomb count is capped at grid size * grid_size - 1
 # TODO: Switch from bomb to boom char?
-# TODO: Show bombs on loss
 # TODO: Add thread support, like hangman
 # TODO: Add custom emoji to the bot that is the flag one on top of the green square one
 # TODO: Report expiry
+# TODO: Prevent bombs adjacent to initial revealed position as well, requires raising minimum grid size to 3
 
 import crescent
 import hikari
@@ -259,6 +259,13 @@ class MinesweeperGrid:
             if north_exists and west_exists:
                 self.reveal_cell(row - 1, column - 1, True)
 
+    def reveal_bombs(self) -> None:
+        for row in range(self.size):
+            for column in range(self.size):
+                grid_cell = self.grid[row][column]
+                if grid_cell.is_bomb():
+                    grid_cell.state = MinesweeperGridCellState.REVEALED
+
     def get_cell_bomb_status(self, row: int, column: int) -> bool:
         if row >= self.size or column >= self.size:
             raise Exception(f'Cell ({row}, {column}) is out of range')
@@ -280,6 +287,7 @@ class MinesweeperGrid:
                     return False
 
         return covered_squares == self.bomb_count
+
 
 class MinesweeperGame:
     grid: MinesweeperGrid
@@ -381,6 +389,7 @@ class MinesweeperGame:
 
             if self.grid.get_cell_bomb_status(row, column):
                 self.status = MinesweeperGameStatus.LOST
+                self.grid.reveal_bombs()
             elif self.grid.check_game_won():
                 self.status = MinesweeperGameStatus.WON
 
