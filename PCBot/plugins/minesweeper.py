@@ -9,7 +9,6 @@
 # TODO: Add thread support, like hangman
 # TODO: Add custom emoji to the bot that is the flag one on top of the green square one
 # TODO: Report expiry
-# TODO: Prevent bombs adjacent to initial revealed position as well, requires raising minimum grid size to 3
 
 import crescent
 import hikari
@@ -174,6 +173,10 @@ class MinesweeperGrid:
             while True:
                 row = random.randrange(self.size)
                 column = random.randrange(self.size)
+
+                if (abs(row - except_row) <= 1
+                    and abs(column - except_column) <= 1):
+                        continue
 
                 if self.grid[row][column].make_bomb():
                   break
@@ -579,7 +582,7 @@ class MinesweeperCommand:
     """
 
     grid_size = crescent.option(
-        int, 'Size of minesweeper grid', min_value=2, default=9, max_value=13
+        int, 'Size of minesweeper grid', min_value=3, default=9, max_value=13
     )
     bomb_count = crescent.option(
         int, 'Number of bombs in the grid', min_value=1, default=5, max_value=80
