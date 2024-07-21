@@ -9,6 +9,11 @@
 # TODO: Add thread support, like hangman
 # TODO: Add custom emoji to the bot that is the flag one on top of the green square one
 # TODO: Report expiry
+# TODO: Report why moves failed
+# TODO: Add any todos from both old versions of minesweeper
+# TODO: Report bomb count - flag count
+# TODO: Flag all bombs on a win
+# Also see todos later in the file
 
 import crescent
 import hikari
@@ -283,7 +288,7 @@ class MinesweeperGrid:
         for row in range(self.size):
             for column in range(self.size):
                 grid_cell = self.grid[row][column]
-                if grid_cell.state is MinesweeperGridCellState.COVERED:
+                if grid_cell.state is not MinesweeperGridCellState.REVEALED:
                     covered_squares += 1
 
                 if covered_squares > self.bomb_count:
