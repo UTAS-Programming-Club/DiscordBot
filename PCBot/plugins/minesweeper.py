@@ -5,7 +5,12 @@
 # the same issue so it is not bot specific.
 # TODO: Add messages that check for and prevent exceptions from occurring
 # TODO: Ensure bomb count is capped at grid size * grid_size - 1
-# TODO: Check if game is over
+# TODO: Check if game has been won
+# TODO: Switch from bomb to boom char?
+# TODO: Show bombs on loss
+# TODO: Add thread support, like hangman
+# TODO: Add custom emoji to the bot that is the flag one on top of the green square one
+# TODO: Report expiry
 
 import crescent
 import hikari
@@ -213,7 +218,7 @@ class MinesweeperGrid:
         else:
             raise Exception(f'Unexpected cell state {grid_cell.state}')
 
-    def reveal_cell(self, row: int, column: int) -> None:
+    def reveal_cell(self, row: int, column: int, flooding=False) -> None:
         if row >= self.size or column >= self.size:
             raise Exception(f'Cell ({row}, {column}) is out of range')
 
@@ -223,12 +228,38 @@ class MinesweeperGrid:
               f'Cell ({row}, {column}) is flagged so cannot be uncovered'
             )
         elif grid_cell.state is MinesweeperGridCellState.REVEALED:
+            if flooding:
+                return
             raise Exception(f'Cell ({row}, {column}) is already revealed')
 
         if not self.generated_mines:
             self._generate_mines(row, column)
 
         grid_cell.state = MinesweeperGridCellState.REVEALED
+
+        if grid_cell.revealed_char_idx == 0:
+            north_exists = row > 0
+            east_exists = column < self.size - 1
+            south_exists = row < self.size - 1
+            west_exists = column > 0
+
+            if north_exists:
+                self.reveal_cell(row - 1, column, True)
+            if north_exists and east_exists:
+                self.reveal_cell(row - 1, column + 1, True)
+            if east_exists:
+                self.reveal_cell(row, column + 1, True)
+            if south_exists and east_exists:
+                self.reveal_cell(row + 1, column + 1, True)
+            if south_exists:
+                self.reveal_cell(row + 1, column, True)
+            if south_exists and west_exists:
+                self.reveal_cell(row + 1, column - 1, True)
+            if west_exists:
+                self.reveal_cell(row, column - 1, True)
+            if north_exists and west_exists:
+                self.reveal_cell(row - 1, column - 1, True)
+
 
     def get_cell_bomb_status(self, row: int, column: int) -> bool:
         if row >= self.size or column >= self.size:
@@ -336,6 +367,7 @@ class MinesweeperGame:
 
             if self.grid.get_cell_bomb_status(row, column):
                 self.status = MinesweeperGameStatus.LOST
+                return
         else:
             raise Exception(f'Unexpected option {option}')
 

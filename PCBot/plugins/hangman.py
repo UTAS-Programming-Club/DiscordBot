@@ -2,6 +2,8 @@
 
 # TODO: Support multiplayer where one player provides the word and the other plays the game
 # TODO: Support versus multiplayer where two people privately play the same game and get scored based on time to win/lose
+# TODO: Show instructions on how to play
+# TODO: Allow guessing entire words and end game either way
 
 import crescent
 import hikari
