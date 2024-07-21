@@ -17,7 +17,6 @@ from crescent.ext import docstrings
 from dataclasses import dataclass
 from enum import Enum
 from miru.ext import menu
-from miru.ext.menu.items import button, DecoratedScreenItem
 from PCBot.botdata import BotData
 from typing import Awaitable, Callable, Optional
 
@@ -33,10 +32,10 @@ class MinesweeperGridCellState(Enum):
     REVEALED  = 3
 
 
-class MinesweeperScreenStage(Enum):
-    OPTION = 1
-    LETTER = 2
-    NUMBER = 3
+class MinesweeperGameStatus(Enum):
+    STARTED = 1
+    LOST    = 2
+    WON     = 3
 
 
 class MinesweeperOption(Enum):
@@ -45,6 +44,12 @@ class MinesweeperOption(Enum):
     FAILED_FLAG_BY_REVEALED   = 3
     FAILED_REVEAL_BY_FLAGGED  = 4
     FAILED_REVEAL_BY_REVEALED = 5
+
+
+class MinesweeperScreenStage(Enum):
+    OPTION = 1
+    LETTER = 2
+    NUMBER = 3
 
 
 class MinesweeperInputMethod(Enum):
@@ -56,6 +61,9 @@ class MinesweeperInputMethod(Enum):
 class MinesweeperGridCell:
     revealed_char_idx = 0
     state = MinesweeperGridCellState.COVERED
+
+    def is_bomb(self) -> bool:
+        return self.revealed_char_idx == 9
 
     def make_bomb(self) -> bool:
         was_bomb = self.revealed_char_idx == 9
@@ -222,9 +230,17 @@ class MinesweeperGrid:
 
         grid_cell.state = MinesweeperGridCellState.REVEALED
 
+    def get_cell_bomb_status(self, row: int, column: int) -> bool:
+        if row >= self.size or column >= self.size:
+            raise Exception(f'Cell ({row}, {column}) is out of range')
+
+        grid_cell = self.grid[row][column]
+        return grid_cell.is_bomb()
+
 
 class MinesweeperGame:
     grid: MinesweeperGrid
+    status = MinesweeperGameStatus.STARTED
 
     last_column: Optional[int] = None # Letter
     last_row: Optional[int] = None    # Number
@@ -234,35 +250,7 @@ class MinesweeperGame:
     def __init__(self, grid_size: int, bomb_count: int):
         self.grid = MinesweeperGrid(grid_size, bomb_count)
 
-    def make_move(
-      self, row: int, column: int, option: MinesweeperOption,
-      input_method: MinesweeperInputMethod
-    ) -> None:
-        if row >= self.grid.size or column >= self.grid.size:
-            return
-
-        self.last_column = column
-        self.last_row = row
-        self.last_option = option
-        self.last_input_method = input_method
-
-        if option is MinesweeperOption.FLAG:
-            if self.grid.get_cell_revealed_status(row, column):
-                self.last_option = MinesweeperOption.FAILED_FLAG_BY_REVEALED
-                return
-            self.grid.toggle_cell_flagged_status(row, column)
-        elif option is MinesweeperOption.REVEAL:
-            if self.grid.get_cell_flagged_status(row, column):
-                self.last_option = MinesweeperOption.FAILED_REVEAL_BY_FLAGGED
-                return
-            if self.grid.get_cell_revealed_status(row, column):
-                self.last_option = MinesweeperOption.FAILED_REVEAL_BY_REVEALED
-                return
-            self.grid.reveal_cell(row, column)
-        else:
-            raise Exception(f'Unexpected option {option}')
-
-    def get_current_status(self) -> str:
+    def __str__(self) -> str:
         status = inspect.cleandoc(
           '''You are playing minesweeper.
           Play using either the buttons below or by replying with a
@@ -309,10 +297,47 @@ class MinesweeperGame:
                       f'Invalid input method {self.last_input_method} used.'
                     )
                 status += '.'
-        
+
+        status += f'\n{self.grid}'
+
+        if self.status is MinesweeperGameStatus.LOST:
+            status += '\n\nYou have lost the game.'
+
         # Discord trims whitespace only lines and new lines preceeding them
         # but not if they contain markup like italics
-        return status + f'\n{self.grid}\n_ _'
+        return status + '\n_ _'
+
+    def make_move(
+      self, row: int, column: int, option: MinesweeperOption,
+      input_method: MinesweeperInputMethod
+    ) -> None:
+        if row >= self.grid.size or column >= self.grid.size:
+            return
+
+        self.last_column = column
+        self.last_row = row
+        self.last_option = option
+        self.last_input_method = input_method
+
+        if option is MinesweeperOption.FLAG:
+            if self.grid.get_cell_revealed_status(row, column):
+                self.last_option = MinesweeperOption.FAILED_FLAG_BY_REVEALED
+                return
+            self.grid.toggle_cell_flagged_status(row, column)
+        elif option is MinesweeperOption.REVEAL:
+            if self.grid.get_cell_flagged_status(row, column):
+                self.last_option = MinesweeperOption.FAILED_REVEAL_BY_FLAGGED
+                return
+            if self.grid.get_cell_revealed_status(row, column):
+                self.last_option = MinesweeperOption.FAILED_REVEAL_BY_REVEALED
+                return
+
+            self.grid.reveal_cell(row, column)
+
+            if self.grid.get_cell_bomb_status(row, column):
+                self.status = MinesweeperGameStatus.LOST
+        else:
+            raise Exception(f'Unexpected option {option}')
 
 
 def create_button(
@@ -320,21 +345,20 @@ def create_button(
   callback: Callable[
     [menu.Screen, miru.ViewContext, menu.ScreenButton], Awaitable[None],
   ],
-  style = hikari.ButtonStyle.PRIMARY
+  style = hikari.ButtonStyle.PRIMARY,
+  disabled = False,
 ) -> menu.ScreenButton:
-    button = menu.ScreenButton(label, style=style)
+    button = menu.ScreenButton(label, style=style, disabled=disabled)
     button.callback = lambda ctx: callback(ctx, button)
     return button
 
 
 class MinesweeperScreen(menu.Screen):
     created_initial_buttons = False
-
-    state = MinesweeperScreenStage.OPTION
-    option: Optional[MinesweeperOption] = None
-
     letter: Optional[chr] = None
+    state = MinesweeperScreenStage.OPTION
 
+    option: Optional[MinesweeperOption] = None
     game: MinesweeperGame
 
     def __init__(self, menu: menu.Menu, grid_size: int, bomb_count: int):
@@ -347,11 +371,19 @@ class MinesweeperScreen(menu.Screen):
           await self.show_option_buttons()
 
         return menu.ScreenContent(
-          content=self.game.get_current_status()
+          content=str(self.game)
         )
 
     async def reload(self) -> None:
+        if self.game.status is MinesweeperGameStatus.LOST:
+            for child in self.menu.children:
+                child.disabled = True
+
         await self.menu.update_message(await self.build_content())
+
+        if self.game.status is MinesweeperGameStatus.LOST:
+            games.pop(self.menu.message.id, None)
+            self.menu.stop()
 
     async def show_option_buttons(self) -> None:
         self.menu.clear_items()
@@ -360,6 +392,7 @@ class MinesweeperScreen(menu.Screen):
         await self.reload()
 
     async def show_input_buttons(self) -> None:
+        disable = self.game.status is not MinesweeperGameStatus.STARTED
         self.menu.clear_items()
 
         for i in range(self.game.grid.size):

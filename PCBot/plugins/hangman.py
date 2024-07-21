@@ -142,8 +142,8 @@ class HangmanGame:
         if (self.message is not None and
              (player_won or mistake_count >= max_mistake_count)):
             global games
-            games.pop(self.message.id)
-            games.pop(self.message.channel_id)
+            games.pop(self.message.id, None)
+            games.pop(self.message.channel_id, None)
 
         return status + '```'
 
