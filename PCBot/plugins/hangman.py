@@ -171,7 +171,7 @@ async def on_message_create(event: hikari.MessageCreateEvent):
     else:
         return
 
-    if game_message.id not in games:
+    if not game_message or game_message.id not in games:
         return
     game_info = games[game_message.id]
 
