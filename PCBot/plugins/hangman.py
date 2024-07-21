@@ -25,6 +25,7 @@ class HangmanGame:
     """Maintain and allow guesses for a hangman game."""
 
     user_id: hikari.snowflakes.Snowflake
+    thread_id: Optional[hikari.snowflakes.Snowflake] = None
     message: Optional[hikari.Message] = None
 
     word: str
@@ -58,16 +59,24 @@ class HangmanGame:
         else:
             return False
 
-    def get_current_status(self) -> str:
+    def __str__(self) -> str:
         """Produce a string to describe the current state of the game."""
         mistake_count = len([
           letter for letter in self.guesses if letter not in self.word
         ])
 
-        # Line 1: "Hangman: "
-        status = '```ansi\nHangman: \n'
+        # Line 1
+        status = 'You are playing hangman.\n'
 
-        # Line 2: "╭────╮   Word: _____"
+        # Line 2
+        global games
+        if self.thread_id and self.thread_id in games:
+            status += 'Play by sending a message with a letter guess.'
+        else:
+            status += 'Play by replying to this message with a letter guess.'
+        status += '\n```ansi\n'
+
+        # Line 3: "╭────╮   Word: _____"
         if mistake_count >= 1:
             status += '╭────╮   '
         status += 'Word: '
@@ -81,7 +90,7 @@ class HangmanGame:
                 player_won = False
         status += '\n'
 
-        # Line 3: "│    😟"
+        # Line 4: "│    😟"
         if mistake_count >= 1:
             status += '│   '
         if player_won and 0 < mistake_count < max_mistake_count:
@@ -90,7 +99,7 @@ class HangmanGame:
             status += ' 😟'
         status += '\n'
 
-        # Line 4: "│   ╱│╲  Guesses: ...., N wrong"
+        # Line 5: "│   ╱│╲  Guesses: ...., N wrong"
         if mistake_count >= 1:
             status += '│   '
         if mistake_count >= max_mistake_count - 2:
@@ -111,14 +120,14 @@ class HangmanGame:
             status += f', {mistake_count} wrong'
         status += '\n'
 
-        # Line 5: "│    │"
+        # Line 6: "│    │"
         if mistake_count >= 1:
             status += '│'
         if mistake_count >= max_mistake_count - 1:
             status += '    │'
         status += '\n'
 
-        # Line 6: "│   ╱ ╲  RESULT STRING 1"
+        # Line 7: "│   ╱ ╲  RESULT STRING 1"
         if mistake_count >= 1:
             status += '│   '
         if mistake_count >= max_mistake_count:
@@ -133,15 +142,14 @@ class HangmanGame:
         if player_won:
             status += 'You have won the game!'
 
-        # Line 7: "┴        RESULT STRING 2"
+        # Line 8: "┴        RESULT STRING 2"
         if mistake_count >= 1:
             status += '\n┴'
         if mistake_count >= max_mistake_count:
-            status += "        The answer was: '" + self.word + "'."
+            status += f'        The answer was: {self.word}.'
 
         if (self.message is not None and
              (player_won or mistake_count >= max_mistake_count)):
-            global games
             games.pop(self.message.id)
             games.pop(self.message.channel_id)
 
@@ -184,11 +192,11 @@ async def on_message_create(event: hikari.MessageCreateEvent):
     # TODO: Check if ephmeral replies can even work, switch to a new message?
     if not game_info.add_guess(message_char):
         await event.message.respond(
-            "Your guess '" + message_char + "' has already been made.",
+            f'Your guess {message_char} has already been made.',
             flags=hikari.MessageFlag.EPHEMERAL
         )
 
-    await game_message.edit(game_info.get_current_status())
+    await game_message.edit(str(game_info))
     await event.message.delete()
 
 
@@ -233,14 +241,14 @@ class HangmanCommand:
               ctx.channel_id, ChannelType.GUILD_PUBLIC_THREAD, 'Hangman'
             )
             games[thread.id] = game
+            game.thread_id = thread.id
 
-            game.message = await thread.send(game.get_current_status())
+            game.message = await thread.send(str(game))
         else:
-            game.message = await ctx.respond(
-              game.get_current_status(), ensure_message=True
-            )
-
             if in_thread:
                 games[thread.id] = game
+                game.thread_id = thread.id
+
+            game.message = await ctx.respond(str(game), ensure_message=True)
 
         games[game.message.id] = game
