@@ -5,7 +5,6 @@
 # the same issue so it is not bot specific.
 # TODO: Add messages that check for and prevent exceptions from occurring
 # TODO: Ensure bomb count is capped at grid size * grid_size - 1
-# TODO: Check if game has been won
 # TODO: Switch from bomb to boom char?
 # TODO: Show bombs on loss
 # TODO: Add thread support, like hangman
@@ -260,7 +259,6 @@ class MinesweeperGrid:
             if north_exists and west_exists:
                 self.reveal_cell(row - 1, column - 1, True)
 
-
     def get_cell_bomb_status(self, row: int, column: int) -> bool:
         if row >= self.size or column >= self.size:
             raise Exception(f'Cell ({row}, {column}) is out of range')
@@ -268,6 +266,20 @@ class MinesweeperGrid:
         grid_cell = self.grid[row][column]
         return grid_cell.is_bomb()
 
+    # TODO: track covered_squares to remove the need for the loop
+    def check_game_won(self) -> bool:
+        covered_squares = 0
+
+        for row in range(self.size):
+            for column in range(self.size):
+                grid_cell = self.grid[row][column]
+                if grid_cell.state is MinesweeperGridCellState.COVERED:
+                    covered_squares += 1
+
+                if covered_squares > self.bomb_count:
+                    return False
+
+        return covered_squares == self.bomb_count
 
 class MinesweeperGame:
     grid: MinesweeperGrid
@@ -333,6 +345,8 @@ class MinesweeperGame:
 
         if self.status is MinesweeperGameStatus.LOST:
             status += '\n\nYou have lost the game.'
+        elif self.status is MinesweeperGameStatus.WON:
+            status += '\n\nYou have won the game!'
 
         # Discord trims whitespace only lines and new lines preceeding them
         # but not if they contain markup like italics
@@ -367,7 +381,9 @@ class MinesweeperGame:
 
             if self.grid.get_cell_bomb_status(row, column):
                 self.status = MinesweeperGameStatus.LOST
-                return
+            elif self.grid.check_game_won():
+                self.status = MinesweeperGameStatus.WON
+
         else:
             raise Exception(f'Unexpected option {option}')
 
@@ -407,13 +423,17 @@ class MinesweeperScreen(menu.Screen):
         )
 
     async def reload(self) -> None:
-        if self.game.status is MinesweeperGameStatus.LOST:
+        game_over = self.game.status in {
+          MinesweeperGameStatus.LOST, MinesweeperGameStatus.WON
+        }
+
+        if game_over:
             for child in self.menu.children:
                 child.disabled = True
 
         await self.menu.update_message(await self.build_content())
 
-        if self.game.status is MinesweeperGameStatus.LOST:
+        if game_over:
             games.pop(self.menu.message.id, None)
             self.menu.stop()
 
