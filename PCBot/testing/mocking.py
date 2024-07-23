@@ -6,17 +6,29 @@ import hikari
 import inspect
 from PCBot.pluginmanager import get_plugin_info
 from PCBot.testing.hikari.test_users_comparision import make_user
+from typing import Optional
 
 # TODO: Support more crescent features
 # TODO: Add error checking for invalid plugin or command_index
 # TODO: Check types of other builtins before using setattr
+
+message_id = -1
+
+class MockMessage:
+    id: int
+
+    def __init__(self, id: int):
+        self.id = id
+
+    async def edit(self, output: str):
+        print(f'*{self.id}: {output}')
 
 
 class MockContext:
     """A partial console implementation of crescent.Context."""
 
     user: hikari.users.UserImpl
-    message_index = 0
+    last_message_id: Optional[int] = None
 
     def __init__(self, app: hikari.traits.RESTAware):
         """Create mock context, currently only user is mocked."""
@@ -25,19 +37,23 @@ class MockContext:
     async def defer(self, ephemeral: bool = False) -> None:
         return None
 
-    async def respond(self, output: str, ephemeral: bool = False) -> None:
+    async def respond(self, output: str, ephemeral: bool = False, ensure_message: bool = False) -> MockMessage:
         """Mock crescent.Context.respond with console."""
-        self.message_index += 1
+        global message_id
+        message_id += 1
         if ephemeral:
             print('#', end='')
         else:
             print(' ', end='')
-        print(f'{self.message_index}: {output}')
-        return None
+        print(f'{message_id}: {output}')
+        last_message_id = message_id
+        return MockMessage(message_id)
 
-    async def edit(self, output: str):
+    async def edit(self, output: str) -> None:
         """Mock crescent.Context.edit with console."""
-        print(f'*{self.message_index}: {output}')
+        if not self.last_message_id:
+            raise Exception("Edit called without first calling respond")
+        print(f'*{self.last_message_id}: {output}')
 
 
 def mock_command(crescent_client: crescent.Client, plugin: str,
