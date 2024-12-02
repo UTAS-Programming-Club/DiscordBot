@@ -3,6 +3,7 @@
 import crescent
 import hikari
 from json import load
+from operator import itemgetter
 from PCBot.botdata import BotData
 from tabulate import tabulate
 
@@ -11,7 +12,7 @@ plugin = crescent.Plugin[hikari.GatewayBot, BotData]()
 
 @plugin.include
 @crescent.command(name="aoc", description="Fetch 2024 AOC leaderboard.")
-class PingCommand:
+class AOCCommand:
     """
     Display cached 2024 AOC leaderboard.
 
@@ -20,7 +21,7 @@ class PingCommand:
     """
 
     async def callback(self, ctx: crescent.Context) -> None:
-        """Handle tictactoe command being run by showing the leaderboard."""
+        """Handle aoc command being run by showing the leaderboard."""
         with open("./data/aoc-leaderboard.json") as file:
             leaderboard = load(file)
 
@@ -49,6 +50,8 @@ class PingCommand:
           for player in leaderboard["members"].values()
           if player['stars'] != 0
         ]
+        data.sort(key=itemgetter(0))
+        data.sort(key=itemgetter(1), reverse=True)
 
         output = f"Year: {leaderboard['event']}\n"
 
