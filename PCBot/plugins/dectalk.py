@@ -11,11 +11,11 @@ import subprocess
 import sys
 from crescent.ext import docstrings
 from PCBot.botdata import (
-    BotData, lavalink_password_path, get_token_file_path
+    BotData, lavalink_password_path, get_token_file_path,
+    ongaku_available
 )
-
-if sys.version_info.minor < 11:
-    raise Exception('dectalk uses hikari-ongaku which requires python >= 3.11')
+if not ongaku_available:
+    raise Exception('dectalk uses hikari-ongaku which is not available')
 import ongaku
 from ongaku.ext import checker
 

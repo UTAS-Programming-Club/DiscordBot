@@ -8,7 +8,7 @@ import sys
 from hikari.intents import Intents
 from PCBot.botdata import (
     BotData, token_path, lavalink_password_path,
-    guild_id_path, get_token_file_path
+    guild_id_path, get_token_file_path, ongaku_available
 )
 from PCBot.pluginmanager import (
   get_plugin_info, print_plugin_info, reload_plugins
@@ -18,7 +18,7 @@ from PCBot.pluginmanager import (
 #   make_interactions_member
 # )
 
-if sys.version_info.minor >= 11:
+if ongaku_available:
     import ongaku
 
 # Load bot token
@@ -43,7 +43,7 @@ bot = hikari.GatewayBot(
 )
 miru_client = miru.Client(bot)
 
-if sys.version_info.minor >= 11:
+if ongaku_available:
     ongaku_client = ongaku.Client(bot, password=lavalink_password)
     model = BotData(miru_client, ongaku_client)
 else:

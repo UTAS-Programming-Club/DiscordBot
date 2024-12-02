@@ -5,17 +5,19 @@ import miru
 import os
 import sys
 
-if sys.version_info.minor >= 11:
+try:
     import ongaku
-
+    ongaku_available = True
+except:
+    ongaku_available = False
 
 @dataclasses.dataclass
 class BotData:
     """Store data used in plugins, passed to crescent at startup as a model."""
 
     miru: miru.Client
-    if sys.version_info.minor >= 11:
-      ongaku_client: ongaku.Client
+    if ongaku_available:
+        ongaku_client: ongaku.Client
 
 
 token_path = './secrets/token'

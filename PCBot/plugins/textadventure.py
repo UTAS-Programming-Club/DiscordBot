@@ -79,7 +79,6 @@ ffi.cdef("""
 
 // From game.h
     struct PlayerInfo {
-    // TODO: Add other stats such as agility that can be impacted by equipment
         PlayerStat health;
         PlayerStat stamina;
         PlayerStat physAtk;
