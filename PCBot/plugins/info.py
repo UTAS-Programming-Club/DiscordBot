@@ -142,7 +142,7 @@ class InfoCommand:
                        f"(<{commit_info['html_url']}>)\n")
             full_message = commit_info['commit']['message']
             output += '\t' + full_message.split('\n')[0] + '\n'
-        output += '\nDiscordBut forks:'
+        output += '\nDiscordBot forks:'
         forks = gh_get_forks(s)
         for fork in forks:
             events = gh_get_fork_events(s, fork['events_url'])
