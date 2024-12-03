@@ -1,7 +1,7 @@
 """This module contains the bot's plugin aoc leaderboard command."""
 
 import crescent
-import hikari
+from hikari import GatewayBot
 from json import load
 from logging import getLogger
 from operator import itemgetter
@@ -14,7 +14,7 @@ from time import time
 leaderboard_path = "./data/aoc-leaderboard.json"
 leaderboard_refresh_interval = 1800  # 30 minutes
 logger = getLogger(__name__)
-plugin = crescent.Plugin[hikari.GatewayBot, BotData]()
+plugin = crescent.Plugin[GatewayBot, BotData]()
 
 # Load aoc cookie
 with open(get_token_file_path(aoc_cookie_path)) as file:
@@ -79,6 +79,7 @@ class AOCCommand:
         data = [
           [
             player["name"],
+            player["local_score"],
             player["stars"],
             f"`{user_mapping[player["name"]].mention}`"
               if player["name"] in user_mapping
@@ -93,7 +94,8 @@ class AOCCommand:
         output = f"Year: {leaderboard['event']}\n"
 
         table = tabulate(data, headers=[
-          "Username", "Star count", "Discord".ljust(max_display_len + 1, " ")
+          "Username", "Score", "Star count",
+          "Discord".ljust(max_display_len + 1, " ")
         ], tablefmt="heavy_outline")
         table_lines = table.split("\n")
 
