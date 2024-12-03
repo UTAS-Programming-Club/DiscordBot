@@ -1,6 +1,7 @@
 """This module contains the bot's plugin aoc leaderboard command."""
 
 import crescent
+from datetime import datetime, timedelta
 from hikari import GatewayBot
 from json import load
 from logging import getLogger
@@ -10,6 +11,7 @@ from PCBot.botdata import aoc_cookie_path, BotData, get_token_file_path
 from requests import get
 from tabulate import tabulate
 from time import time
+from zoneinfo import ZoneInfo
 
 leaderboard_path = "./data/aoc-leaderboard.json"
 leaderboard_refresh_interval = 1800  # 30 minutes
@@ -44,6 +46,14 @@ async def fetch_leaderboard(ctx: crescent.Context) -> bool:
             file.write(request.text)
 
     return True
+
+def get_remaining_time() -> timedelta:
+    timezone = ZoneInfo("Etc/GMT+5")
+    now = datetime.now(timezone)
+    last_midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    next_midnight = last_midnight + timedelta(days=1)
+
+    return next_midnight - now
 
 @plugin.include
 @crescent.command(name="aoc", description="Fetch 2024 AOC leaderboard.")
@@ -91,7 +101,11 @@ class AOCCommand:
         data.sort(key=itemgetter(0))
         data.sort(key=itemgetter(1), reverse=True)
 
-        output = f"Year: {leaderboard['event']}\n"
+        remaining_time = get_remaining_time()
+        formatted_time = str(remaining_time).split(".")[0]
+
+        output = f"Year: {leaderboard['event']}\n"\
+               + f"Time to next puzzle: {formatted_time}\n"
 
         table = tabulate(data, headers=[
           "Username", "Score", "Star count",
@@ -108,8 +122,7 @@ class AOCCommand:
             components = table_lines[i + 3][1:-1].rsplit("┃", 2)
             output += components[0] + "┃"\
                    +  "  " + components[1][:-2] + "┃"\
-                   +  "`" + components[2]
-            output += "\n"
+                   +  "`" + components[2] + "\n"
 
         output += f"`{table_lines[-1][1:-1]}`"
 
