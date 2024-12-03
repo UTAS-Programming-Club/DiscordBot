@@ -40,7 +40,7 @@ async def fetch_leaderboard(ctx: crescent.Context) -> bool:
         if request.status_code != 200:
             return False
 
-        with open(leaderboard_path, "a") as file:
+        with open(leaderboard_path, "w") as file:
             file.write(request.text)
 
     return True
