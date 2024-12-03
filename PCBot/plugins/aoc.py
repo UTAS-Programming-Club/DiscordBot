@@ -80,8 +80,8 @@ class AOCCommand:
           [
             player["name"],
             player["local_score"],
-            player["stars"],
-            f"`{user_mapping[player["name"]].mention}`"
+            f"{player["stars"]} ⭐  *",
+            user_mapping[player["name"]].mention
               if player["name"] in user_mapping
               else ""
           ]
@@ -96,7 +96,8 @@ class AOCCommand:
         table = tabulate(data, headers=[
           "Username", "Score", "Star count",
           "Discord".ljust(max_display_len + 1, " ")
-        ], tablefmt="heavy_outline")
+        ], colalign=("left", "right", "right"),
+          tablefmt="heavy_outline")
         table_lines = table.split("\n")
 
         for i in range(3):
@@ -104,13 +105,10 @@ class AOCCommand:
 
         for i, player in enumerate(data):
             output += "`"
-            aoc_name = player[0]
-            line = table_lines[i + 3][1:-1]
-            if aoc_name not in user_mapping:
-                output += line.rsplit("┃", 1)[0] + "┃`"
-            else:
-                output += line.rsplit("`", 2)[0][:-2] + "┃` "
-                output += user_mapping[aoc_name].mention
+            components = table_lines[i + 3][1:-1].rsplit("┃", 2)
+            output += components[0] + "┃"\
+                   +  "  " + components[1][:-2] + "┃"\
+                   +  "`" + components[2]
             output += "\n"
 
         output += f"`{table_lines[-1][1:-1]}`"
