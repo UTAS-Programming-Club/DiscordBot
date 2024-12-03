@@ -24,6 +24,7 @@ token_path = './secrets/token'
 lavalink_password_path = './secrets/lavalink'
 guild_id_path = './secrets/guild'
 gh_pem_path = './secrets/gh_private.pem'
+aoc_cookie_path = './secrets/aoccookie'
 
 
 def get_token_file_path(file: str) -> str:

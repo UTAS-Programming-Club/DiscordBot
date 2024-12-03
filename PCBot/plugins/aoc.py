@@ -1,14 +1,49 @@
-"""This module contains the bot's plugin reloading command."""
+"""This module contains the bot's plugin aoc leaderboard command."""
 
 import crescent
 import hikari
 from json import load
+from logging import getLogger
 from operator import itemgetter
-from PCBot.botdata import BotData
+from os import path
+from PCBot.botdata import aoc_cookie_path, BotData, get_token_file_path
+from requests import get
 from tabulate import tabulate
+from time import time
 
+leaderboard_path = "./data/aoc-leaderboard.json"
+leaderboard_refresh_interval = 1800  # 30 minutes
+logger = getLogger(__name__)
 plugin = crescent.Plugin[hikari.GatewayBot, BotData]()
 
+# Load aoc cookie
+with open(get_token_file_path(aoc_cookie_path)) as file:
+    session_cookie = file.read().strip()
+
+
+# TODO: Switch to crescent task
+async def fetch_leaderboard(ctx: crescent.Context) -> bool:
+    """Check if leaderboard is stale and update if needed."""
+    last_modify_time = path.getmtime(leaderboard_path)
+    diff = time() - last_modify_time
+
+    if diff >= leaderboard_refresh_interval:
+        logger.info("Updating leaderboard")
+
+        await ctx.defer()
+
+        leaderboard_url = \
+          "https://adventofcode.com/2024/leaderboard/private/view/2494838.json"
+        headers = {'Cookie': session_cookie}
+        request = get(leaderboard_url, headers=headers)
+
+        if request.status_code != 200:
+            return False
+
+        with open(leaderboard_path, "a") as file:
+            file.write(request.text)
+
+    return True
 
 @plugin.include
 @crescent.command(name="aoc", description="Fetch 2024 AOC leaderboard.")
@@ -22,7 +57,9 @@ class AOCCommand:
 
     async def callback(self, ctx: crescent.Context) -> None:
         """Handle aoc command being run by showing the leaderboard."""
-        with open("./data/aoc-leaderboard.json") as file:
+        await fetch_leaderboard(ctx)
+
+        with open(leaderboard_path) as file:
             leaderboard = load(file)
 
         with open("./data/aoc-usermapping.json") as file:
@@ -66,11 +103,12 @@ class AOCCommand:
         for i, player in enumerate(data):
             output += "`"
             aoc_name = player[0]
+            line = table_lines[i + 3][1:-1]
             if aoc_name not in user_mapping:
-                output += table_lines[i + 3][1:-1].rsplit("┃", 1)[0] + "┃`"
+                output += line.rsplit("┃", 1)[0] + "┃`"
             else:
-                output += table_lines[i + 3][1:-1].rsplit("`", 2)[0][:-2]
-                output += "┃` " + user_mapping[aoc_name].mention
+                output += line.rsplit("`", 2)[0][:-2] + "┃` "
+                output += user_mapping[aoc_name].mention
             output += "\n"
 
         output += f"`{table_lines[-1][1:-1]}`"
