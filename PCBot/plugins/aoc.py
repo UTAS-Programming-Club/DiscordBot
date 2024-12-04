@@ -65,13 +65,11 @@ class AOCCommand:
     Implemented by something sensible(somethingsensible).
     """
 
-    async def callback(self, ctx: crescent.Context) -> None:
-        """Handle aoc command being run by showing the leaderboard."""
-        await fetch_leaderboard(ctx)
+    use_old_format = \
+      crescent.option(bool, "Use custom column format", default=False)
 
-        with open(leaderboard_path) as file:
-            leaderboard = load(file)
-
+    async def get_mapping(self, ctx: crescent.Context) -> (list, int):
+        """Create table with optional info about aoc participants."""
         with open("./data/aoc-usermapping.json") as file:
             mapping = load(file)
 
@@ -88,7 +86,14 @@ class AOCCommand:
             ]
             max_display_len = max(max_display_len, len(member.display_name))
 
-        data = [
+        return (user_mapping, max_display_len)
+
+    def get_users(self, user_mapping: list) -> (list, int):
+        """Create table with displayed info about aoc participants."""
+        with open(leaderboard_path) as file:
+            leaderboard = load(file)
+
+        user_data = [
           [
             player["name"],
             player["local_score"],
@@ -103,33 +108,54 @@ class AOCCommand:
           for player in leaderboard["members"].values()
           if player['stars'] != 0
         ]
-        data.sort(key=itemgetter(0))
-        data.sort(key=itemgetter(1), reverse=True)
+        # Sort by name, alphabetically
+        user_data.sort(key=itemgetter(0))
+        # TODO: Support sorting via stars instead
+        # Sort via score, highest at the top
+        user_data.sort(key=itemgetter(1), reverse=True)
 
-        remaining_time = get_remaining_time()
-        formatted_time = str(remaining_time).split(".")[0]
+        return (user_data, leaderboard["event"])
 
-        output = f"Year: {leaderboard['event']}\n"\
-               + f"Time to next puzzle: {formatted_time}\n"
-
-        table = tabulate(data, headers=[
+    def create_custom_table(self, user_data: list, max_display_len: int)\
+      -> str:
+        """Create string containing table with info about aoc participants."""
+        table_data = tabulate(user_data, headers=[
           "Username", "Score", "Star count", "Language(s)",
           "Discord".ljust(max_display_len + 1, " ")
         ], colalign=("left", "right", "right"),
           tablefmt="heavy_outline")
-        table_lines = table.split("\n")
+        table_lines = table_data.split("\n")
+
+        table_output = ""
 
         for i in range(3):
-            output += f"`{table_lines[i][1:-1]}`\n"
+            table_output += f"`{table_lines[i][1:-1]}`\n"
 
-        for i, player in enumerate(data):
-            output += "`"
+        for i, player in enumerate(user_data):
+            table_output += "`"
             components = table_lines[i + 3][1:-1].rsplit("┃", 3)
-            output += components[0] + "┃"\
-                   +  "  " + components[1][:-2] + "┃"\
-                   +  components[2] + "┃"\
-                   +  "`" + components[3] + "\n"
+            table_output += components[0] + "┃"\
+                         +  "  " + components[1][:-2] + "┃"\
+                         +  components[2] + "┃"\
+                         +  "`" + components[3] + "\n"
 
-        output += f"`{table_lines[-1][1:-1]}`"
+        table_output += f"`{table_lines[-1][1:-1]}`"
+
+        return table_output
+
+    async def callback(self, ctx: crescent.Context) -> None:
+        """Handle aoc command being run by showing the leaderboard."""
+        await fetch_leaderboard(ctx)
+
+        (user_mapping, max_display_len) = await self.get_mapping(ctx)
+        (user_data, year) = self.get_users(user_mapping)
+        table_output = self.create_custom_table(user_data, max_display_len)
+
+        remaining_time = get_remaining_time()
+        formatted_time = str(remaining_time).split(".")[0]
+
+        output = f"Year: {year}\n"\
+               + f"Time to next puzzle: {formatted_time}\n"\
+               + table_output
 
         await ctx.respond(output, user_mentions=False)
