@@ -3,6 +3,7 @@
 import crescent
 from datetime import datetime, timedelta
 from hikari import GatewayBot
+from hikari.embeds import Embed, EmbedField
 from json import load
 from logging import getLogger
 from operator import itemgetter
@@ -143,13 +144,44 @@ class AOCCommand:
 
         return table_output
 
+    def create_embed_table(self, user_data: list) -> Embed:
+        embed = Embed()
+
+        usernames = ""
+        scores = ""
+        languages = ""
+
+        max_score_len = max(len(str(user[1])) for user in user_data)
+
+        for user in user_data:
+            username = user[4] if user[4] != "" else user[0]
+            score_length = len(str(user[1]))
+            score = str(user[1]).rjust(max_score_len - score_length + 2, " ")
+            star_count = user[2][:-5]
+
+            usernames += username + "\n"
+            scores += f"`{score}, {star_count}` ⭐" + "\n"
+            languages += user[3] + "\n"
+
+
+        embed.add_field("Username", usernames, inline=True)
+        embed.add_field("Score", scores, inline=True)
+        embed.add_field("Language", languages, inline=True)
+
+        return embed
+
     async def callback(self, ctx: crescent.Context) -> None:
         """Handle aoc command being run by showing the leaderboard."""
         await fetch_leaderboard(ctx)
 
         (user_mapping, max_display_len) = await self.get_mapping(ctx)
         (user_data, year) = self.get_users(user_mapping)
-        table_output = self.create_custom_table(user_data, max_display_len)
+        if self.use_old_format:
+            table_output = self.create_custom_table(user_data, max_display_len)
+            embed = None
+        else:
+            table_output = ""
+            embed = self.create_embed_table(user_data)
 
         remaining_time = get_remaining_time()
         formatted_time = str(remaining_time).split(".")[0]
@@ -158,4 +190,4 @@ class AOCCommand:
                + f"Time to next puzzle: {formatted_time}\n"\
                + table_output
 
-        await ctx.respond(output, user_mentions=False)
+        await ctx.respond(output, embed=embed, user_mentions=False)
