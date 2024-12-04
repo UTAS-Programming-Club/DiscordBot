@@ -79,19 +79,24 @@ class AOCCommand:
         max_display_len = 0
 
         for user in mapping:
-            user_mapping[user["aoc"]] = await ctx.app.rest.fetch_member(
-              ctx.guild_id, user=user["discord"]
+            member = await ctx.app.rest.fetch_member(
+             ctx.guild_id, user=user["discord"]
             )
-            max_display_len = max(
-              max_display_len, len(user_mapping[user["aoc"]].display_name)
-            )
+            user_mapping[user["aoc"]] = [
+              user["language"] if "language" in user else "",
+              member
+            ]
+            max_display_len = max(max_display_len, len(member.display_name))
 
         data = [
           [
             player["name"],
             player["local_score"],
             f"{player["stars"]} ⭐  *",
-            user_mapping[player["name"]].mention
+            user_mapping[player["name"]][0]
+              if player["name"] in user_mapping
+              else "",
+            user_mapping[player["name"]][1].mention
               if player["name"] in user_mapping
               else ""
           ]
@@ -108,7 +113,7 @@ class AOCCommand:
                + f"Time to next puzzle: {formatted_time}\n"
 
         table = tabulate(data, headers=[
-          "Username", "Score", "Star count",
+          "Username", "Score", "Star count", "Language(s)",
           "Discord".ljust(max_display_len + 1, " ")
         ], colalign=("left", "right", "right"),
           tablefmt="heavy_outline")
@@ -119,10 +124,11 @@ class AOCCommand:
 
         for i, player in enumerate(data):
             output += "`"
-            components = table_lines[i + 3][1:-1].rsplit("┃", 2)
+            components = table_lines[i + 3][1:-1].rsplit("┃", 3)
             output += components[0] + "┃"\
                    +  "  " + components[1][:-2] + "┃"\
-                   +  "`" + components[2] + "\n"
+                   +  components[2] + "┃"\
+                   +  "`" + components[3] + "\n"
 
         output += f"`{table_lines[-1][1:-1]}`"
 
