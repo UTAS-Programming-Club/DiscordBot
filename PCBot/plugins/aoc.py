@@ -76,7 +76,7 @@ class AOCCommand:
     """
     Display cached 2024 AOC leaderboard.
 
-    Requested by Lindsay Wells(giantlindsay).
+    Requested by Ian Lewis(giant_ian) & Lindsay Wells(giantlindsay).
     Implemented by something sensible(somethingsensible).
     """
 
@@ -103,7 +103,8 @@ class AOCCommand:
             )
             user_mapping[user["aoc"]] = [
               user["language"] if "language" in user else "",
-              member
+              member,
+              user["update_name"] if "update_name" in user else False
             ]
             max_display_len = max(max_display_len, len(member.display_name))
 
@@ -212,6 +213,16 @@ class AOCCommand:
 
         return embed
 
+    async def update_names(self, ctx, user_mapping: list, user_data: list)\
+      -> None:
+        for name, user in user_mapping.items():
+            if not user[2]:
+              continue
+
+            stars = next(data[2] for data in user_data if data[0] == name)
+            name = user[1].nickname.rsplit("[")[0]
+            await user[1].edit(nickname=f"{name}[📅🎄{stars}⭐]")
+
     async def callback(self, ctx: crescent.Context) -> None:
         """Handle aoc command being run by showing the leaderboard."""
         await fetch_leaderboard(ctx)
@@ -235,3 +246,5 @@ class AOCCommand:
                + table_output
 
         await ctx.respond(output, embed=embed, user_mentions=False)
+
+        await self.update_names(ctx, user_mapping, user_data)
