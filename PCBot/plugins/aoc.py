@@ -1,6 +1,7 @@
 """This module contains the bot's plugin aoc leaderboard command."""
 
 import crescent
+from crescent.ext import tasks
 from datetime import datetime, timedelta
 from enum import Enum
 from hikari import AutocompleteInteractionOption, GatewayBot
@@ -9,7 +10,9 @@ from json import load
 from logging import getLogger
 from operator import itemgetter
 from os import path
-from PCBot.botdata import aoc_cookie_path, BotData, get_token_file_path
+from PCBot.botdata import (
+  aoc_cookie_path, BotData, get_token_file_path, guild_id_path
+)
 from requests import get
 from tabulate import tabulate
 from time import time
@@ -24,9 +27,12 @@ plugin = crescent.Plugin[GatewayBot, BotData]()
 with open(get_token_file_path(aoc_cookie_path)) as file:
     session_cookie = file.read().strip()
 
+# Load guild id
+with open(get_token_file_path(guild_id_path)) as f:
+    guild_id = int(f.read().strip())
 
-# TODO: Switch to crescent task
-async def fetch_leaderboard(ctx: crescent.Context) -> bool:
+
+async def fetch_leaderboard() -> None:
     """Check if leaderboard is stale and update if needed."""
     last_modify_time = path.getmtime(leaderboard_path)
     diff = time() - last_modify_time
@@ -34,20 +40,47 @@ async def fetch_leaderboard(ctx: crescent.Context) -> bool:
     if diff >= leaderboard_refresh_interval:
         logger.info("Updating leaderboard")
 
-        await ctx.defer()
-
         leaderboard_url = \
           "https://adventofcode.com/2024/leaderboard/private/view/2494838.json"
         headers = {'Cookie': session_cookie}
         request = get(leaderboard_url, headers=headers)
 
         if request.status_code != 200:
-            return False
+            return
 
         with open(leaderboard_path, "w") as file:
             file.write(request.text)
 
-    return True
+async def update_names() -> None:
+    with open("./data/aoc-usermapping.json") as file:
+        mapping = load(file)
+
+    user_mapping = {
+        user["aoc"]: [
+            await plugin.app.rest.fetch_member(
+              guild_id, user=user["discord"]
+            )
+        ]
+        for user in mapping
+        if "update_name" in user and user["update_name"]
+    }
+
+    with open(leaderboard_path) as file:
+        leaderboard = load(file)
+
+    user_data = [
+      [
+        player["stars"],
+        user_mapping[player["name"]][0]
+      ]
+      for player in leaderboard["members"].values()
+      if player['stars'] != 0 and player["name"] in user_mapping
+    ]
+
+    for user in user_data:
+        name = user[1].nickname.rsplit("[")[0]
+        await user[1].edit(nickname=f"{name}[📅🎄{user[0]}⭐]")
+
 
 def get_remaining_time() -> timedelta:
     timezone = ZoneInfo("Etc/GMT+5")
@@ -69,6 +102,12 @@ async def autocomplete_score_type(
     # I tried (st.name, st) but that gives "Object of type ScoreType is not JSON serializable"
     return [(st.name, st.name) for st in ScoreType]
 
+
+@plugin.include
+@tasks.loop(hours=0, minutes=30, seconds=0)
+async def update_leaderboard() -> None:
+    await fetch_leaderboard()
+    await update_names()
 
 @plugin.include
 @crescent.command(name="aoc", description="Fetch 2024 AOC leaderboard.")
@@ -213,19 +252,9 @@ class AOCCommand:
 
         return embed
 
-    async def update_names(self, ctx, user_mapping: list, user_data: list)\
-      -> None:
-        for name, user in user_mapping.items():
-            if not user[2]:
-              continue
-
-            stars = next(data[2] for data in user_data if data[0] == name)
-            name = user[1].nickname.rsplit("[")[0]
-            await user[1].edit(nickname=f"{name}[📅🎄{stars}⭐]")
-
     async def callback(self, ctx: crescent.Context) -> None:
         """Handle aoc command being run by showing the leaderboard."""
-        await fetch_leaderboard(ctx)
+        await fetch_leaderboard()
 
         score_type = ScoreType[self.score_type]
 
@@ -247,4 +276,4 @@ class AOCCommand:
 
         await ctx.respond(output, embed=embed, user_mentions=False)
 
-        await self.update_names(ctx, user_mapping, user_data)
+        await update_names()
