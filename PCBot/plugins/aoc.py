@@ -5,7 +5,7 @@ from crescent.ext import tasks
 from datetime import datetime, timedelta
 from enum import Enum
 from hikari import AutocompleteInteractionOption, GatewayBot
-from hikari.embeds import Embed, EmbedField
+from hikari.embeds import Embed
 from json import load
 from logging import getLogger
 from operator import itemgetter
@@ -28,17 +28,23 @@ with open(get_token_file_path(aoc_cookie_path)) as file:
     session_cookie = file.read().strip()
 
 # Load guild id
-with open(get_token_file_path(guild_id_path)) as f:
-    guild_id = int(f.read().strip())
+with open(get_token_file_path(guild_id_path)) as file:
+    guild_id = int(file.read().strip())
 
 
-async def fetch_leaderboard() -> None:
+async def fetch_leaderboard(ctx: crescent.Context | None = None) -> None:
     """Check if leaderboard is stale and update if needed."""
-    last_modify_time = path.getmtime(leaderboard_path)
+    if path.isfile(leaderboard_path):
+        last_modify_time = path.getmtime(leaderboard_path)
+    else:
+        last_modify_time = 0
     diff = time() - last_modify_time
 
     if diff >= leaderboard_refresh_interval:
         logger.info("Updating leaderboard")
+
+        if ctx:
+            await ctx.defer()
 
         leaderboard_url = \
           "https://adventofcode.com/2024/leaderboard/private/view/2494838.json"
@@ -254,7 +260,7 @@ class AOCCommand:
 
     async def callback(self, ctx: crescent.Context) -> None:
         """Handle aoc command being run by showing the leaderboard."""
-        await fetch_leaderboard()
+        await fetch_leaderboard(ctx)
 
         score_type = ScoreType[self.score_type]
 
