@@ -61,12 +61,50 @@ class backend_GameState:
         self.currentScreen = backend_GlobalData.mainMenu
 
 
+class backend_ScreenActionType(Enum):
+    __slots__ = ()
+
+    @staticmethod
+    def GotoScreen(screen):
+        return backend_ScreenActionType("GotoScreen", 0, (screen,))
+
 
 class backend_Screen:
     __slots__ = ("body",)
 
     def __init__(self,body):
         self.body = body
+
+
+
+class backend_ActionScreen(backend_Screen):
+    __slots__ = ("actions",)
+
+    def __init__(self,body,actions):
+        self.actions = None
+        super().__init__(body)
+        self.actions = actions
+
+    def GetActions(self,state):
+        _g = []
+        _g1 = 0
+        _g2 = self.actions
+        while (_g1 < len(_g2)):
+            action = (_g2[_g1] if _g1 >= 0 and _g1 < len(_g2) else None)
+            _g1 = (_g1 + 1)
+            if action.isVisible(state):
+                _g.append(action)
+        return _g
+
+
+
+class backend_ScreenAction:
+    __slots__ = ("title", "type", "isVisible")
+
+    def __init__(self,title,_hx_type,isVisible):
+        self.title = title
+        self.type = _hx_type
+        self.isVisible = isVisible
 
 
 
@@ -127,6 +165,17 @@ class python_internal_ArrayImpl:
             return None
 
 
+class HxOverrides:
+    __slots__ = ()
+
+    @staticmethod
+    def stringOrNull(s):
+        if (s is None):
+            return "null"
+        else:
+            return s
+
+
 class python_internal_MethodClosure:
     __slots__ = ("obj", "func")
 
@@ -140,7 +189,12 @@ class python_internal_MethodClosure:
 
 
 backend_Entity.MaximumStat = 100
-backend_GlobalData.mainMenu = backend_Screen("This is a test")
+backend_GlobalData.test = backend_ActionScreen("This is a test",[])
+def _hx_init_backend_GlobalData_mainMenu():
+    def _hx_local_0(state):
+        return True
+    return backend_ActionScreen(((("Untitled text adventure game\n" + "----------------------------\n") + "By the UTAS Programming Club\n\n") + "Currently unimplemented :("),[backend_ScreenAction("Start Game",backend_ScreenActionType.GotoScreen(backend_GlobalData.test),_hx_local_0)])
+backend_GlobalData.mainMenu = _hx_init_backend_GlobalData_mainMenu()
 def _hx_init_backend_GlobalData_enemyStats():
     def _hx_local_0():
         _g = haxe_ds_StringMap()
