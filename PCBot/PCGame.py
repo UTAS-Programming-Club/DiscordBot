@@ -60,6 +60,11 @@ class backend_GameState:
     def __init__(self):
         self.currentScreen = backend_GlobalData.mainMenu
 
+    def HandleGameInput(self,action):
+        screen = action.params[0]
+        self.currentScreen = screen
+        return True
+
 
 class backend_ScreenActionType(Enum):
     __slots__ = ()
