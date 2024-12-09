@@ -5,7 +5,7 @@
 import crescent
 from hikari import Message, MessageCreateEvent, GatewayBot
 from hikari.snowflakes import Snowflake
-from PCBot.PCGame import backend_ActionScreen, backend_GameState
+from PCBot.PCGame import backend_ActionScreen, backend_GameState, backend_ScreenActionOutcome
 
 
 plugin = crescent.Plugin[GatewayBot, None]()
@@ -18,17 +18,19 @@ async def handle_output(message: Message) -> None:
     if isinstance(game.currentScreen, backend_ActionScreen):
         response = ('```' + game.currentScreen.body + '```'
                     + '\nReply to this message with one of the numbers below '
-                    + 'to choose that option:\n')
+                    + 'to choose that option:')
 
         actions = game.currentScreen.GetActions(game)
         for idx, action in enumerate(actions):
-            response += f"{idx}. {action.title}"
+            response += f"\n{idx}. {action.title}"
     else:
         response = 'Unable to get current screen'
     await message.edit(response)
 
 async def handle_input(message: Message, index: int) -> None:
     """Update the current game state given the last input."""
+    global games
+
     game = games[message.id]
 
     if not isinstance(game.currentScreen, backend_ActionScreen):
@@ -39,11 +41,15 @@ async def handle_input(message: Message, index: int) -> None:
     if index >= len(actions):
         return
 
-    if not game.HandleGameInput(actions[index].type):
-        await message.edit('Unable to process selected action')
-        return
-
-    await handle_output(message)
+    outcome = game.HandleGameInput(actions[index].type)
+    match outcome:
+        case backend_ScreenActionOutcome.GetNextOutput:
+            await handle_output(message)
+        case backend_ScreenActionOutcome.QuitGame:
+            await message.edit('Game is over')
+            del games[message.id]
+        case _:
+            await message.edit('Unable to process selected action')
 
 # TODO: Reuse hangman input method with thread support
 @plugin.include

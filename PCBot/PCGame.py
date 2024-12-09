@@ -58,20 +58,19 @@ class backend_GameState:
     __slots__ = ("currentScreen",)
 
     def __init__(self):
-        self.currentScreen = backend_GlobalData.mainMenu
+        self.currentScreen = backend_GlobalData.mainMenuScreen
 
     def HandleGameInput(self,action):
-        screen = action.params[0]
-        self.currentScreen = screen
-        return True
+        tmp = action.index
+        if (tmp == 0):
+            screen = action.params[0]
+            self.currentScreen = screen
+            return backend_ScreenActionOutcome.GetNextOutput
+        elif (tmp == 1):
+            return backend_ScreenActionOutcome.QuitGame
+        else:
+            pass
 
-
-class backend_ScreenActionType(Enum):
-    __slots__ = ()
-
-    @staticmethod
-    def GotoScreen(screen):
-        return backend_ScreenActionType("GotoScreen", 0, (screen,))
 
 
 class backend_Screen:
@@ -102,6 +101,14 @@ class backend_ActionScreen(backend_Screen):
         return _g
 
 
+class backend_ScreenActionType(Enum):
+    __slots__ = ()
+
+    @staticmethod
+    def GotoScreen(screen):
+        return backend_ScreenActionType("GotoScreen", 0, (screen,))
+backend_ScreenActionType.QuitGame = backend_ScreenActionType("QuitGame", 1, ())
+
 
 class backend_ScreenAction:
     __slots__ = ("title", "type", "isVisible")
@@ -111,10 +118,19 @@ class backend_ScreenAction:
         self.type = _hx_type
         self.isVisible = isVisible
 
+    @staticmethod
+    def AlwaysVisible(state):
+        return True
+
 
 
 class backend_GlobalData:
     __slots__ = ()
+
+class backend_ScreenActionOutcome(Enum):
+    __slots__ = ()
+backend_ScreenActionOutcome.GetNextOutput = backend_ScreenActionOutcome("GetNextOutput", 0, ())
+backend_ScreenActionOutcome.QuitGame = backend_ScreenActionOutcome("QuitGame", 1, ())
 
 
 class frontends_PythonFrontend:
@@ -194,12 +210,9 @@ class python_internal_MethodClosure:
 
 
 backend_Entity.MaximumStat = 100
-backend_GlobalData.test = backend_ActionScreen("This is a test",[])
-def _hx_init_backend_GlobalData_mainMenu():
-    def _hx_local_0(state):
-        return True
-    return backend_ActionScreen(((("Untitled text adventure game\n" + "----------------------------\n") + "By the UTAS Programming Club\n\n") + "Currently unimplemented :("),[backend_ScreenAction("Start Game",backend_ScreenActionType.GotoScreen(backend_GlobalData.test),_hx_local_0)])
-backend_GlobalData.mainMenu = _hx_init_backend_GlobalData_mainMenu()
+backend_GlobalData.gameScreen = backend_ActionScreen("Game rooms are not currently supported",[])
+backend_GlobalData.loadScreen = backend_ActionScreen("Game loading is not currently supported",[])
+backend_GlobalData.mainMenuScreen = backend_ActionScreen(((("Untitled text adventure game\n" + "----------------------------\n") + "By the UTAS Programming Club\n\n") + "Currently unimplemented :("),[backend_ScreenAction("Start Game",backend_ScreenActionType.GotoScreen(backend_GlobalData.gameScreen),backend_ScreenAction.AlwaysVisible), backend_ScreenAction("Load Game",backend_ScreenActionType.GotoScreen(backend_GlobalData.loadScreen),backend_ScreenAction.AlwaysVisible), backend_ScreenAction("Quit Game",backend_ScreenActionType.QuitGame,backend_ScreenAction.AlwaysVisible)])
 def _hx_init_backend_GlobalData_enemyStats():
     def _hx_local_0():
         _g = haxe_ds_StringMap()
@@ -208,5 +221,3 @@ def _hx_init_backend_GlobalData_enemyStats():
         return _g
     return _hx_local_0()
 backend_GlobalData.enemyStats = _hx_init_backend_GlobalData_enemyStats()
-
-frontends_PythonFrontend.main()
