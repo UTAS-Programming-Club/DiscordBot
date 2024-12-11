@@ -72,6 +72,17 @@ class backend_GameState:
             pass
 
 
+class haxe_ds_Either(Enum):
+    __slots__ = ()
+
+    @staticmethod
+    def Left(v):
+        return haxe_ds_Either("Left", 0, (v,))
+
+    @staticmethod
+    def Right(v):
+        return haxe_ds_Either("Right", 1, (v,))
+
 class backend_ScreenActionType(Enum):
     __slots__ = ()
 
@@ -85,7 +96,22 @@ class backend_Screen:
     __slots__ = ("body",)
 
     def __init__(self,body):
-        self.body = body
+        tmp = None
+        tmp1 = body.index
+        if (tmp1 == 0):
+            bodyStr = body.params[0]
+            def _hx_local_0(_):
+                return bodyStr
+            tmp = _hx_local_0
+        elif (tmp1 == 1):
+            bodyFunc = body.params[0]
+            tmp = bodyFunc
+        else:
+            pass
+        self.body = tmp
+
+    def GetBody(self,state):
+        return self.body(state)
 
 
 
@@ -135,6 +161,34 @@ class backend_GlobalData:
     @staticmethod
     def Init():
         backend_GlobalData.mainMenuScreen.Init([backend_ScreenAction("Start Game",backend_ScreenActionType.GotoScreen(backend_GlobalData.gameScreen)), backend_ScreenAction("Load Game",backend_ScreenActionType.GotoScreen(backend_GlobalData.loadScreen)), backend_ScreenAction("Quit Game",backend_ScreenActionType.QuitGame)])
+
+
+class backend__Helpers_OneOf_Impl_:
+    __slots__ = ()
+
+    @staticmethod
+    def fromA(a):
+        return haxe_ds_Either.Left(a)
+
+    @staticmethod
+    def fromB(b):
+        return haxe_ds_Either.Right(b)
+
+    @staticmethod
+    def toA(this1):
+        if (this1.index == 0):
+            a = this1.params[0]
+            return a
+        else:
+            return None
+
+    @staticmethod
+    def toB(this1):
+        if (this1.index == 1):
+            b = this1.params[0]
+            return b
+        else:
+            return None
 
 class backend_ScreenActionOutcome(Enum):
     __slots__ = ()
@@ -219,9 +273,21 @@ class python_internal_MethodClosure:
 
 
 backend_Entity.MaximumStat = 100
-backend_GlobalData.mainMenuScreen = backend_ActionScreen(((("Untitled text adventure game\n" + "----------------------------\n") + "By the UTAS Programming Club\n\n") + "Currently unimplemented :("))
-backend_GlobalData.gameScreen = backend_ActionScreen("Game rooms are not currently supported",[backend_ScreenAction("Quit",backend_ScreenActionType.GotoScreen(backend_GlobalData.mainMenuScreen))])
-backend_GlobalData.loadScreen = backend_ActionScreen("Game loading is not currently supported",[backend_ScreenAction("Quit",backend_ScreenActionType.GotoScreen(backend_GlobalData.mainMenuScreen))])
+backend_GlobalData.mainMenuVisitCount = 0
+def _hx_init_backend_GlobalData_mainMenuScreen():
+    def _hx_local_3(state):
+        body = ((("Untitled text adventure game\n" + "----------------------------\n") + "By the UTAS Programming Club\n\n") + "Currently unimplemented :(")
+        if (backend_GlobalData.mainMenuVisitCount > 0):
+            body = (str(body) + HxOverrides.stringOrNull((("\n\nReload count: " + str(backend_GlobalData.mainMenuVisitCount)))))
+        _hx_local_1 = backend_GlobalData
+        _hx_local_2 = _hx_local_1.mainMenuVisitCount
+        _hx_local_1.mainMenuVisitCount = (_hx_local_2 + 1)
+        _hx_local_2
+        return body
+    return backend_ActionScreen(haxe_ds_Either.Right(_hx_local_3))
+backend_GlobalData.mainMenuScreen = _hx_init_backend_GlobalData_mainMenuScreen()
+backend_GlobalData.gameScreen = backend_ActionScreen(haxe_ds_Either.Left("Game rooms are not currently supported"),[backend_ScreenAction("Quit",backend_ScreenActionType.GotoScreen(backend_GlobalData.mainMenuScreen))])
+backend_GlobalData.loadScreen = backend_ActionScreen(haxe_ds_Either.Left("Game loading is not currently supported"),[backend_ScreenAction("Quit",backend_ScreenActionType.GotoScreen(backend_GlobalData.mainMenuScreen))])
 def _hx_init_backend_GlobalData_enemyStats():
     def _hx_local_0():
         _g = haxe_ds_StringMap()

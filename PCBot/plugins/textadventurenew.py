@@ -16,7 +16,7 @@ async def handle_output(message: Message) -> None:
     game = games[message.id]
 
     if isinstance(game.currentScreen, backend_ActionScreen):
-        response = ('```' + game.currentScreen.body + '```'
+        response = ('```' + game.currentScreen.GetBody(game) + '```'
                     + '\nReply to this message with one of the numbers below '
                     + 'to choose that option:')
 
