@@ -2,6 +2,7 @@
 # coding: utf-8
 import sys
 
+import math as python_lib_Math
 
 
 class Enum:
@@ -55,9 +56,10 @@ class backend_EntityStats:
 
 
 class backend_GameState:
-    __slots__ = ("currentScreen",)
+    __slots__ = ("currentScreen", "player")
 
     def __init__(self):
+        self.player = backend_Player()
         self.currentScreen = backend_GlobalData.mainMenuScreen
 
     def HandleGameInput(self,action):
@@ -67,6 +69,48 @@ class backend_GameState:
             self.currentScreen = screen
             return backend_ScreenActionOutcome.GetNextOutput
         elif (tmp == 1):
+            a = (self.player.Y + 1)
+            b = backend_GlobalData.floorSize
+            x = (a if (python_lib_Math.isnan(a)) else (b if (python_lib_Math.isnan(b)) else min(a,b)))
+            tmp = None
+            try:
+                tmp = int(x)
+            except BaseException as _g:
+                tmp = None
+            self.player.Y = tmp
+            return backend_ScreenActionOutcome.GetNextOutput
+        elif (tmp == 2):
+            a = (self.player.X + 1)
+            b = backend_GlobalData.floorSize
+            x = (a if (python_lib_Math.isnan(a)) else (b if (python_lib_Math.isnan(b)) else min(a,b)))
+            tmp = None
+            try:
+                tmp = int(x)
+            except BaseException as _g:
+                tmp = None
+            self.player.X = tmp
+            return backend_ScreenActionOutcome.GetNextOutput
+        elif (tmp == 3):
+            a = (self.player.Y - 1)
+            x = (a if (python_lib_Math.isnan(a)) else (0 if (python_lib_Math.isnan(0)) else max(a,0)))
+            tmp = None
+            try:
+                tmp = int(x)
+            except BaseException as _g:
+                tmp = None
+            self.player.Y = tmp
+            return backend_ScreenActionOutcome.GetNextOutput
+        elif (tmp == 4):
+            a = (self.player.X - 1)
+            x = (a if (python_lib_Math.isnan(a)) else (0 if (python_lib_Math.isnan(0)) else max(a,0)))
+            tmp = None
+            try:
+                tmp = int(x)
+            except BaseException as _g:
+                tmp = None
+            self.player.X = tmp
+            return backend_ScreenActionOutcome.GetNextOutput
+        elif (tmp == 5):
             return backend_ScreenActionOutcome.QuitGame
         else:
             pass
@@ -89,7 +133,26 @@ class backend_ScreenActionType(Enum):
     @staticmethod
     def GotoScreen(screen):
         return backend_ScreenActionType("GotoScreen", 0, (screen,))
-backend_ScreenActionType.QuitGame = backend_ScreenActionType("QuitGame", 1, ())
+backend_ScreenActionType.GoNorth = backend_ScreenActionType("GoNorth", 1, ())
+backend_ScreenActionType.GoEast = backend_ScreenActionType("GoEast", 2, ())
+backend_ScreenActionType.GoSouth = backend_ScreenActionType("GoSouth", 3, ())
+backend_ScreenActionType.GoWest = backend_ScreenActionType("GoWest", 4, ())
+backend_ScreenActionType.QuitGame = backend_ScreenActionType("QuitGame", 5, ())
+
+
+class backend_ScreenAction:
+    __slots__ = ("title", "type", "isVisible")
+
+    def __init__(self,title,_hx_type,isVisible = None):
+        self.title = title
+        self.type = _hx_type
+        tmp = isVisible
+        self.isVisible = (tmp if ((tmp is not None)) else backend_ScreenAction.AlwaysVisible)
+
+    @staticmethod
+    def AlwaysVisible(state):
+        return True
+
 
 
 class backend_Screen:
@@ -140,27 +203,23 @@ class backend_ActionScreen(backend_Screen):
 
 
 
-class backend_ScreenAction:
-    __slots__ = ("title", "type", "isVisible")
-
-    def __init__(self,title,_hx_type,isVisible = None):
-        self.title = title
-        self.type = _hx_type
-        tmp = isVisible
-        self.isVisible = (tmp if ((tmp is not None)) else backend_ScreenAction.AlwaysVisible)
-
-    @staticmethod
-    def AlwaysVisible(state):
-        return True
-
-
-
 class backend_GlobalData:
     __slots__ = ()
 
     @staticmethod
     def Init():
         backend_GlobalData.mainMenuScreen.Init([backend_ScreenAction("Start Game",backend_ScreenActionType.GotoScreen(backend_GlobalData.gameScreen)), backend_ScreenAction("Load Game",backend_ScreenActionType.GotoScreen(backend_GlobalData.loadScreen)), backend_ScreenAction("Quit Game",backend_ScreenActionType.QuitGame)])
+        _g = 0
+        _g1 = len(backend_GlobalData.rooms)
+        while (_g < _g1):
+            i = _g
+            _g = (_g + 1)
+            val = ([None]*backend_GlobalData.floorSize)
+            backend_GlobalData.rooms[i] = val
+        val = backend_Room.Empty
+        backend_GlobalData.rooms[0][0] = val
+        val = backend_Room.Empty
+        backend_GlobalData.rooms[1][0] = val
 
 
 class backend__Helpers_OneOf_Impl_:
@@ -189,6 +248,19 @@ class backend__Helpers_OneOf_Impl_:
             return b
         else:
             return None
+
+
+class backend_Player:
+    __slots__ = ("X", "Y")
+
+    def __init__(self):
+        self.Y = 0
+        self.X = 0
+
+
+class backend_Room(Enum):
+    __slots__ = ()
+backend_Room.Empty = backend_Room("Empty", 0, ())
 
 class backend_ScreenActionOutcome(Enum):
     __slots__ = ()
@@ -273,6 +345,8 @@ class python_internal_MethodClosure:
 
 
 backend_Entity.MaximumStat = 100
+backend_GlobalData.floorSize = 5
+backend_GlobalData.rooms = ([None]*backend_GlobalData.floorSize)
 backend_GlobalData.mainMenuVisitCount = 0
 def _hx_init_backend_GlobalData_mainMenuScreen():
     def _hx_local_3(state):
@@ -286,7 +360,31 @@ def _hx_init_backend_GlobalData_mainMenuScreen():
         return body
     return backend_ActionScreen(haxe_ds_Either.Right(_hx_local_3))
 backend_GlobalData.mainMenuScreen = _hx_init_backend_GlobalData_mainMenuScreen()
-backend_GlobalData.gameScreen = backend_ActionScreen(haxe_ds_Either.Left("Game rooms are not currently supported"),[backend_ScreenAction("Quit",backend_ScreenActionType.GotoScreen(backend_GlobalData.mainMenuScreen))])
+def _hx_init_backend_GlobalData_gameScreen():
+    def _hx_local_0(state):
+        return (((("This is the game, you are in room [" + str(((state.player.X + 1)))) + ", ") + str(((state.player.Y + 1)))) + "].")
+    def _hx_local_1(state):
+        if (state.player.Y == ((backend_GlobalData.floorSize - 1))):
+            return False
+        room = backend_GlobalData.rooms[(state.player.Y + 1)][state.player.X]
+        return (room is not None)
+    def _hx_local_2(state):
+        if (state.player.X == ((backend_GlobalData.floorSize - 1))):
+            return False
+        room = backend_GlobalData.rooms[state.player.Y][(state.player.X + 1)]
+        return (room is not None)
+    def _hx_local_3(state):
+        if (state.player.Y == 0):
+            return False
+        room = backend_GlobalData.rooms[(state.player.Y - 1)][state.player.X]
+        return (room is not None)
+    def _hx_local_4(state):
+        if (state.player.X == 0):
+            return False
+        room = backend_GlobalData.rooms[state.player.Y][(state.player.X - 1)]
+        return (room is not None)
+    return backend_ActionScreen(haxe_ds_Either.Right(_hx_local_0),[backend_ScreenAction("Go North",backend_ScreenActionType.GoNorth,_hx_local_1), backend_ScreenAction("Go East",backend_ScreenActionType.GoEast,_hx_local_2), backend_ScreenAction("Go South",backend_ScreenActionType.GoSouth,_hx_local_3), backend_ScreenAction("Go West",backend_ScreenActionType.GoWest,_hx_local_4), backend_ScreenAction("Quit",backend_ScreenActionType.GotoScreen(backend_GlobalData.mainMenuScreen))])
+backend_GlobalData.gameScreen = _hx_init_backend_GlobalData_gameScreen()
 backend_GlobalData.loadScreen = backend_ActionScreen(haxe_ds_Either.Left("Game loading is not currently supported"),[backend_ScreenAction("Quit",backend_ScreenActionType.GotoScreen(backend_GlobalData.mainMenuScreen))])
 def _hx_init_backend_GlobalData_enemyStats():
     def _hx_local_0():
