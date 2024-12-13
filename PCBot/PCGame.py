@@ -3,10 +3,17 @@
 import sys
 
 import math as python_lib_Math
+import math as Math
+import inspect as python_lib_Inspect
+import sys as python_lib_Sys
+import traceback as python_lib_Traceback
 
 
 class Enum:
+    _hx_class_name = "Enum"
     __slots__ = ("tag", "index", "params")
+    _hx_fields = ["tag", "index", "params"]
+    _hx_methods = ["__str__"]
 
     def __init__(self,tag,index,params):
         self.tag = tag
@@ -20,15 +27,131 @@ class Enum:
             return self.tag + '(' + (', '.join(str(v) for v in self.params)) + ')'
 
 
+
+class Class: pass
+
+
+class Std:
+    _hx_class_name = "Std"
+    __slots__ = ()
+    _hx_statics = ["isOfType", "string"]
+
+    @staticmethod
+    def isOfType(v,t):
+        if ((v is None) and ((t is None))):
+            return False
+        if (t is None):
+            return False
+        if ((type(t) == type) and (t == Dynamic)):
+            return (v is not None)
+        isBool = isinstance(v,bool)
+        if (((type(t) == type) and (t == Bool)) and isBool):
+            return True
+        if ((((not isBool) and (not ((type(t) == type) and (t == Bool)))) and ((type(t) == type) and (t == Int))) and isinstance(v,int)):
+            return True
+        vIsFloat = isinstance(v,float)
+        tmp = None
+        tmp1 = None
+        if (((not isBool) and vIsFloat) and ((type(t) == type) and (t == Int))):
+            f = v
+            tmp1 = (((f != Math.POSITIVE_INFINITY) and ((f != Math.NEGATIVE_INFINITY))) and (not python_lib_Math.isnan(f)))
+        else:
+            tmp1 = False
+        if tmp1:
+            tmp1 = None
+            try:
+                tmp1 = int(v)
+            except BaseException as _g:
+                None
+                tmp1 = None
+            tmp = (v == tmp1)
+        else:
+            tmp = False
+        if ((tmp and ((v <= 2147483647))) and ((v >= -2147483648))):
+            return True
+        if (((not isBool) and ((type(t) == type) and (t == Float))) and isinstance(v,(float, int))):
+            return True
+        if ((type(t) == type) and (t == str)):
+            return isinstance(v,str)
+        isEnumType = ((type(t) == type) and (t == Enum))
+        if ((isEnumType and python_lib_Inspect.isclass(v)) and hasattr(v,"_hx_constructs")):
+            return True
+        if isEnumType:
+            return False
+        isClassType = ((type(t) == type) and (t == Class))
+        if ((((isClassType and (not isinstance(v,Enum))) and python_lib_Inspect.isclass(v)) and hasattr(v,"_hx_class_name")) and (not hasattr(v,"_hx_constructs"))):
+            return True
+        if isClassType:
+            return False
+        tmp = None
+        try:
+            tmp = isinstance(v,t)
+        except BaseException as _g:
+            None
+            tmp = False
+        if tmp:
+            return True
+        if python_lib_Inspect.isclass(t):
+            cls = t
+            loop = None
+            def _hx_local_1(intf):
+                f = (intf._hx_interfaces if (hasattr(intf,"_hx_interfaces")) else [])
+                if (f is not None):
+                    _g = 0
+                    while (_g < len(f)):
+                        i = (f[_g] if _g >= 0 and _g < len(f) else None)
+                        _g = (_g + 1)
+                        if (i == cls):
+                            return True
+                        else:
+                            l = loop(i)
+                            if l:
+                                return True
+                    return False
+                else:
+                    return False
+            loop = _hx_local_1
+            currentClass = v.__class__
+            result = False
+            while (currentClass is not None):
+                if loop(currentClass):
+                    result = True
+                    break
+                currentClass = python_Boot.getSuperClass(currentClass)
+            return result
+        else:
+            return False
+
+    @staticmethod
+    def string(s):
+        return python_Boot.toString1(s,"")
+
+
+class Float: pass
+
+
+class Int: pass
+
+
+class Bool: pass
+
+
+class Dynamic: pass
+
 class backend_HealthChangeType(Enum):
     __slots__ = ()
+    _hx_class_name = "backend.HealthChangeType"
+    _hx_constructs = ["PhysicalCombat", "MagicalCombat", "Heal"]
 backend_HealthChangeType.PhysicalCombat = backend_HealthChangeType("PhysicalCombat", 0, ())
 backend_HealthChangeType.MagicalCombat = backend_HealthChangeType("MagicalCombat", 1, ())
 backend_HealthChangeType.Heal = backend_HealthChangeType("Heal", 2, ())
 
 
 class backend_Entity:
+    _hx_class_name = "backend.Entity"
     __slots__ = ("health", "stamina", "physicalAttack", "physicalDefence", "magicalAttack", "magicalDefence", "agility")
+    _hx_fields = ["health", "stamina", "physicalAttack", "physicalDefence", "magicalAttack", "magicalDefence", "agility"]
+    _hx_statics = ["MaximumStat"]
 
     def __init__(self,stats):
         self.health = stats.health
@@ -42,7 +165,9 @@ class backend_Entity:
 
 
 class backend_EntityStats:
+    _hx_class_name = "backend.EntityStats"
     __slots__ = ("health", "stamina", "physicalAttack", "physicalDefence", "magicalAttack", "magicalDefence", "agility")
+    _hx_fields = ["health", "stamina", "physicalAttack", "physicalDefence", "magicalAttack", "magicalDefence", "agility"]
 
     def __init__(self,health,stamina,physicalAttack,physicalDefence,magicalAttack,magicalDefence,agility):
         self.health = health
@@ -56,11 +181,28 @@ class backend_EntityStats:
 
 
 class backend_GameState:
-    __slots__ = ("currentScreen", "player")
+    _hx_class_name = "backend.GameState"
+    __slots__ = ("roomState", "currentScreen", "inGame", "player")
+    _hx_fields = ["roomState", "currentScreen", "inGame", "player"]
+    _hx_methods = ["SetupGame", "HandleGameInput"]
 
     def __init__(self):
         self.player = backend_Player()
+        self.inGame = False
         self.currentScreen = backend_GlobalData.mainMenuScreen
+        self.roomState = ([([False]*0)]*backend_GlobalData.floorSize)
+
+    def SetupGame(self):
+        self.player = backend_Player()
+        self.inGame = True
+        _g = 0
+        _g1 = len(self.roomState)
+        while (_g < _g1):
+            y = _g
+            _g = (_g + 1)
+            this1 = self.roomState
+            val = ([False]*backend_GlobalData.floorSize)
+            this1[y] = val
 
     def HandleGameInput(self,action):
         tmp = action.index
@@ -69,48 +211,61 @@ class backend_GameState:
             self.currentScreen = screen
             return backend_ScreenActionOutcome.GetNextOutput
         elif (tmp == 1):
-            a = (self.player.Y + 1)
-            b = backend_GlobalData.floorSize
+            _hx_int = (self.player.Y + 1)
+            a = ((4294967296.0 + _hx_int) if ((_hx_int < 0)) else (_hx_int + 0.0))
+            _hx_int = backend_GlobalData.floorSize
+            b = ((4294967296.0 + _hx_int) if ((_hx_int < 0)) else (_hx_int + 0.0))
             x = (a if (python_lib_Math.isnan(a)) else (b if (python_lib_Math.isnan(b)) else min(a,b)))
             tmp = None
             try:
                 tmp = int(x)
             except BaseException as _g:
+                None
                 tmp = None
             self.player.Y = tmp
             return backend_ScreenActionOutcome.GetNextOutput
         elif (tmp == 2):
-            a = (self.player.X + 1)
-            b = backend_GlobalData.floorSize
+            _hx_int = (self.player.X + 1)
+            a = ((4294967296.0 + _hx_int) if ((_hx_int < 0)) else (_hx_int + 0.0))
+            _hx_int = backend_GlobalData.floorSize
+            b = ((4294967296.0 + _hx_int) if ((_hx_int < 0)) else (_hx_int + 0.0))
             x = (a if (python_lib_Math.isnan(a)) else (b if (python_lib_Math.isnan(b)) else min(a,b)))
             tmp = None
             try:
                 tmp = int(x)
             except BaseException as _g:
+                None
                 tmp = None
             self.player.X = tmp
             return backend_ScreenActionOutcome.GetNextOutput
         elif (tmp == 3):
-            a = (self.player.Y - 1)
+            _hx_int = (self.player.Y - 1)
+            a = ((4294967296.0 + _hx_int) if ((_hx_int < 0)) else (_hx_int + 0.0))
             x = (a if (python_lib_Math.isnan(a)) else (0 if (python_lib_Math.isnan(0)) else max(a,0)))
             tmp = None
             try:
                 tmp = int(x)
             except BaseException as _g:
+                None
                 tmp = None
             self.player.Y = tmp
             return backend_ScreenActionOutcome.GetNextOutput
         elif (tmp == 4):
-            a = (self.player.X - 1)
+            _hx_int = (self.player.X - 1)
+            a = ((4294967296.0 + _hx_int) if ((_hx_int < 0)) else (_hx_int + 0.0))
             x = (a if (python_lib_Math.isnan(a)) else (0 if (python_lib_Math.isnan(0)) else max(a,0)))
             tmp = None
             try:
                 tmp = int(x)
             except BaseException as _g:
+                None
                 tmp = None
             self.player.X = tmp
             return backend_ScreenActionOutcome.GetNextOutput
         elif (tmp == 5):
+            self.roomState[self.player.Y][self.player.X] = True
+            return backend_ScreenActionOutcome.GetNextOutput
+        elif (tmp == 6):
             return backend_ScreenActionOutcome.QuitGame
         else:
             pass
@@ -118,6 +273,8 @@ class backend_GameState:
 
 class haxe_ds_Either(Enum):
     __slots__ = ()
+    _hx_class_name = "haxe.ds.Either"
+    _hx_constructs = ["Left", "Right"]
 
     @staticmethod
     def Left(v):
@@ -127,8 +284,304 @@ class haxe_ds_Either(Enum):
     def Right(v):
         return haxe_ds_Either("Right", 1, (v,))
 
+
+class python_Boot:
+    _hx_class_name = "python.Boot"
+    __slots__ = ()
+    _hx_statics = ["keywords", "toString1", "fields", "simpleField", "getInstanceFields", "getSuperClass", "getClassFields", "prefixLength", "unhandleKeywords"]
+
+    @staticmethod
+    def toString1(o,s):
+        if (o is None):
+            return "null"
+        if isinstance(o,str):
+            return o
+        if (s is None):
+            s = ""
+        if (len(s) >= 5):
+            return "<...>"
+        if isinstance(o,bool):
+            if o:
+                return "true"
+            else:
+                return "false"
+        if (isinstance(o,int) and (not isinstance(o,bool))):
+            return str(o)
+        if isinstance(o,float):
+            try:
+                if (o == int(o)):
+                    return str(Math.floor((o + 0.5)))
+                else:
+                    return str(o)
+            except BaseException as _g:
+                None
+                return str(o)
+        if isinstance(o,list):
+            o1 = o
+            l = len(o1)
+            st = "["
+            s = (("null" if s is None else s) + "\t")
+            _g = 0
+            _g1 = l
+            while (_g < _g1):
+                i = _g
+                _g = (_g + 1)
+                prefix = ""
+                if (i > 0):
+                    prefix = ","
+                st = (("null" if st is None else st) + HxOverrides.stringOrNull(((("null" if prefix is None else prefix) + HxOverrides.stringOrNull(python_Boot.toString1((o1[i] if i >= 0 and i < len(o1) else None),s))))))
+            st = (("null" if st is None else st) + "]")
+            return st
+        try:
+            if hasattr(o,"toString"):
+                return o.toString()
+        except BaseException as _g:
+            None
+        if hasattr(o,"__class__"):
+            if isinstance(o,_hx_AnonObject):
+                toStr = None
+                try:
+                    fields = python_Boot.fields(o)
+                    _g = []
+                    _g1 = 0
+                    while (_g1 < len(fields)):
+                        f = (fields[_g1] if _g1 >= 0 and _g1 < len(fields) else None)
+                        _g1 = (_g1 + 1)
+                        x = ((("" + ("null" if f is None else f)) + " : ") + HxOverrides.stringOrNull(python_Boot.toString1(python_Boot.simpleField(o,f),(("null" if s is None else s) + "\t"))))
+                        _g.append(x)
+                    fieldsStr = _g
+                    toStr = (("{ " + HxOverrides.stringOrNull(", ".join([x1 for x1 in fieldsStr]))) + " }")
+                except BaseException as _g:
+                    None
+                    return "{ ... }"
+                if (toStr is None):
+                    return "{ ... }"
+                else:
+                    return toStr
+            if isinstance(o,Enum):
+                o1 = o
+                l = len(o1.params)
+                hasParams = (l > 0)
+                if hasParams:
+                    paramsStr = ""
+                    _g = 0
+                    _g1 = l
+                    while (_g < _g1):
+                        i = _g
+                        _g = (_g + 1)
+                        prefix = ""
+                        if (i > 0):
+                            prefix = ","
+                        paramsStr = (("null" if paramsStr is None else paramsStr) + HxOverrides.stringOrNull(((("null" if prefix is None else prefix) + HxOverrides.stringOrNull(python_Boot.toString1(o1.params[i],s))))))
+                    return (((HxOverrides.stringOrNull(o1.tag) + "(") + ("null" if paramsStr is None else paramsStr)) + ")")
+                else:
+                    return o1.tag
+            if hasattr(o,"_hx_class_name"):
+                if (o.__class__.__name__ != "type"):
+                    fields = python_Boot.getInstanceFields(o)
+                    _g = []
+                    _g1 = 0
+                    while (_g1 < len(fields)):
+                        f = (fields[_g1] if _g1 >= 0 and _g1 < len(fields) else None)
+                        _g1 = (_g1 + 1)
+                        x = ((("" + ("null" if f is None else f)) + " : ") + HxOverrides.stringOrNull(python_Boot.toString1(python_Boot.simpleField(o,f),(("null" if s is None else s) + "\t"))))
+                        _g.append(x)
+                    fieldsStr = _g
+                    toStr = (((HxOverrides.stringOrNull(o._hx_class_name) + "( ") + HxOverrides.stringOrNull(", ".join([x1 for x1 in fieldsStr]))) + " )")
+                    return toStr
+                else:
+                    fields = python_Boot.getClassFields(o)
+                    _g = []
+                    _g1 = 0
+                    while (_g1 < len(fields)):
+                        f = (fields[_g1] if _g1 >= 0 and _g1 < len(fields) else None)
+                        _g1 = (_g1 + 1)
+                        x = ((("" + ("null" if f is None else f)) + " : ") + HxOverrides.stringOrNull(python_Boot.toString1(python_Boot.simpleField(o,f),(("null" if s is None else s) + "\t"))))
+                        _g.append(x)
+                    fieldsStr = _g
+                    toStr = (((("#" + HxOverrides.stringOrNull(o._hx_class_name)) + "( ") + HxOverrides.stringOrNull(", ".join([x1 for x1 in fieldsStr]))) + " )")
+                    return toStr
+            if ((type(o) == type) and (o == str)):
+                return "#String"
+            if ((type(o) == type) and (o == list)):
+                return "#Array"
+            if callable(o):
+                return "function"
+            try:
+                if hasattr(o,"__repr__"):
+                    return o.__repr__()
+            except BaseException as _g:
+                None
+            if hasattr(o,"__str__"):
+                return o.__str__([])
+            if hasattr(o,"__name__"):
+                return o.__name__
+            return "???"
+        else:
+            return str(o)
+
+    @staticmethod
+    def fields(o):
+        a = []
+        if (o is not None):
+            if hasattr(o,"_hx_fields"):
+                fields = o._hx_fields
+                if (fields is not None):
+                    return list(fields)
+            if isinstance(o,_hx_AnonObject):
+                d = o.__dict__
+                keys = d.keys()
+                handler = python_Boot.unhandleKeywords
+                for k in keys:
+                    if (k != '_hx_disable_getattr'):
+                        a.append(handler(k))
+            elif hasattr(o,"__dict__"):
+                d = o.__dict__
+                keys1 = d.keys()
+                for k in keys1:
+                    a.append(k)
+        return a
+
+    @staticmethod
+    def simpleField(o,field):
+        if (field is None):
+            return None
+        field1 = (("_hx_" + field) if ((field in python_Boot.keywords)) else (("_hx_" + field) if (((((len(field) > 2) and ((ord(field[0]) == 95))) and ((ord(field[1]) == 95))) and ((ord(field[(len(field) - 1)]) != 95)))) else field))
+        if hasattr(o,field1):
+            return getattr(o,field1)
+        else:
+            return None
+
+    @staticmethod
+    def getInstanceFields(c):
+        f = (list(c._hx_fields) if (hasattr(c,"_hx_fields")) else [])
+        if hasattr(c,"_hx_methods"):
+            f = (f + c._hx_methods)
+        sc = python_Boot.getSuperClass(c)
+        if (sc is None):
+            return f
+        else:
+            scArr = python_Boot.getInstanceFields(sc)
+            scMap = set(scArr)
+            _g = 0
+            while (_g < len(f)):
+                f1 = (f[_g] if _g >= 0 and _g < len(f) else None)
+                _g = (_g + 1)
+                if (not (f1 in scMap)):
+                    scArr.append(f1)
+            return scArr
+
+    @staticmethod
+    def getSuperClass(c):
+        if (c is None):
+            return None
+        try:
+            if hasattr(c,"_hx_super"):
+                return c._hx_super
+            return None
+        except BaseException as _g:
+            None
+        return None
+
+    @staticmethod
+    def getClassFields(c):
+        if hasattr(c,"_hx_statics"):
+            x = c._hx_statics
+            return list(x)
+        else:
+            return []
+
+    @staticmethod
+    def unhandleKeywords(name):
+        if (HxString.substr(name,0,python_Boot.prefixLength) == "_hx_"):
+            real = HxString.substr(name,python_Boot.prefixLength,None)
+            if (real in python_Boot.keywords):
+                return real
+        return name
+
+
+class _hx_AnonObject:
+    _hx_class_name = "_hx_AnonObject"
+    __slots__ = ()
+
+
+class HxString:
+    _hx_class_name = "HxString"
+    __slots__ = ()
+    _hx_statics = ["substr"]
+
+    @staticmethod
+    def substr(s,startIndex,_hx_len = None):
+        if (_hx_len is None):
+            return s[startIndex:]
+        else:
+            if (_hx_len == 0):
+                return ""
+            if (startIndex < 0):
+                startIndex = (len(s) + startIndex)
+                if (startIndex < 0):
+                    startIndex = 0
+            return s[startIndex:(startIndex + _hx_len)]
+
+
+class haxe_Exception(Exception):
+    _hx_class_name = "haxe.Exception"
+    __slots__ = ("_hx___nativeStack", "_hx___nativeException", "_hx___previousException")
+    _hx_fields = ["__nativeStack", "__nativeException", "__previousException"]
+    _hx_methods = ["toString", "get_message"]
+    _hx_statics = []
+    _hx_interfaces = []
+    _hx_super = Exception
+
+
+    def __init__(self,message,previous = None,native = None):
+        self._hx___previousException = None
+        self._hx___nativeException = None
+        self._hx___nativeStack = None
+        super().__init__(message)
+        self._hx___previousException = previous
+        if ((native is not None) and Std.isOfType(native,BaseException)):
+            self._hx___nativeException = native
+            self._hx___nativeStack = haxe_NativeStackTrace.exceptionStack()
+        else:
+            self._hx___nativeException = self
+            infos = python_lib_Traceback.extract_stack()
+            if (len(infos) != 0):
+                infos.pop()
+            infos.reverse()
+            self._hx___nativeStack = infos
+
+    def toString(self):
+        return self.get_message()
+
+    def get_message(self):
+        return str(self)
+
+
+
+class haxe_NativeStackTrace:
+    _hx_class_name = "haxe.NativeStackTrace"
+    __slots__ = ()
+    _hx_statics = ["saveStack", "exceptionStack"]
+
+    @staticmethod
+    def saveStack(exception):
+        pass
+
+    @staticmethod
+    def exceptionStack():
+        exc = python_lib_Sys.exc_info()
+        if (exc[2] is not None):
+            infos = python_lib_Traceback.extract_tb(exc[2])
+            infos.reverse()
+            return infos
+        else:
+            return []
+
 class backend_ScreenActionType(Enum):
     __slots__ = ()
+    _hx_class_name = "backend.ScreenActionType"
+    _hx_constructs = ["GotoScreen", "GoNorth", "GoEast", "GoSouth", "GoWest", "DodgeTrap", "QuitGame"]
 
     @staticmethod
     def GotoScreen(screen):
@@ -137,11 +590,15 @@ backend_ScreenActionType.GoNorth = backend_ScreenActionType("GoNorth", 1, ())
 backend_ScreenActionType.GoEast = backend_ScreenActionType("GoEast", 2, ())
 backend_ScreenActionType.GoSouth = backend_ScreenActionType("GoSouth", 3, ())
 backend_ScreenActionType.GoWest = backend_ScreenActionType("GoWest", 4, ())
-backend_ScreenActionType.QuitGame = backend_ScreenActionType("QuitGame", 5, ())
+backend_ScreenActionType.DodgeTrap = backend_ScreenActionType("DodgeTrap", 5, ())
+backend_ScreenActionType.QuitGame = backend_ScreenActionType("QuitGame", 6, ())
 
 
 class backend_ScreenAction:
+    _hx_class_name = "backend.ScreenAction"
     __slots__ = ("title", "type", "isVisible")
+    _hx_fields = ["title", "type", "isVisible"]
+    _hx_statics = ["AlwaysVisible"]
 
     def __init__(self,title,_hx_type,isVisible = None):
         self.title = title
@@ -150,40 +607,50 @@ class backend_ScreenAction:
         self.isVisible = (tmp if ((tmp is not None)) else backend_ScreenAction.AlwaysVisible)
 
     @staticmethod
-    def AlwaysVisible(state):
+    def AlwaysVisible(state,room,roomState):
         return True
 
 
 
 class backend_Screen:
-    __slots__ = ("body",)
+    _hx_class_name = "backend.Screen"
+    __slots__ = ("updateState",)
+    _hx_fields = ["updateState"]
+    _hx_methods = ["GetBody"]
 
-    def __init__(self,body):
+    def __init__(self,updateState):
         tmp = None
-        tmp1 = body.index
+        tmp1 = updateState.index
         if (tmp1 == 0):
-            bodyStr = body.params[0]
+            bodyStr = updateState.params[0]
             def _hx_local_0(_):
                 return bodyStr
             tmp = _hx_local_0
         elif (tmp1 == 1):
-            bodyFunc = body.params[0]
-            tmp = bodyFunc
+            updateStateFunc = updateState.params[0]
+            tmp = updateStateFunc
         else:
             pass
-        self.body = tmp
+        self.updateState = tmp
 
     def GetBody(self,state):
-        return self.body(state)
+        return self.updateState(state)
 
 
 
 class backend_ActionScreen(backend_Screen):
+    _hx_class_name = "backend.ActionScreen"
     __slots__ = ("actions",)
+    _hx_fields = ["actions"]
+    _hx_methods = ["Init", "GetActions"]
+    _hx_statics = []
+    _hx_interfaces = []
+    _hx_super = backend_Screen
 
-    def __init__(self,body,actions = None):
+
+    def __init__(self,updateState,actions = None):
         self.actions = None
-        super().__init__(body)
+        super().__init__(updateState)
         if (actions is not None):
             self.actions = actions
 
@@ -191,20 +658,39 @@ class backend_ActionScreen(backend_Screen):
         self.actions = (self.actions if ((self.actions is not None)) else actions)
 
     def GetActions(self,state):
+        room = backend_GlobalData.rooms[state.player.Y][state.player.X]
+        if (room is None):
+            tmp = None
+            if (state.player.X is None):
+                tmp = "null"
+            else:
+                _hx_int = state.player.X
+                tmp = Std.string(((4294967296.0 + _hx_int) if ((_hx_int < 0)) else (_hx_int + 0.0)))
+            tmp1 = None
+            if (state.player.Y is None):
+                tmp1 = "null"
+            else:
+                _hx_int = state.player.Y
+                tmp1 = Std.string(((4294967296.0 + _hx_int) if ((_hx_int < 0)) else (_hx_int + 0.0)))
+            raise haxe_Exception((((("Room (" + ("null" if tmp is None else tmp)) + ", ") + ("null" if tmp1 is None else tmp1)) + ") does not exist"))
+        roomStateRow = state.roomState[state.player.Y]
+        roomState = ((len(roomStateRow) != 0) and roomStateRow[state.player.X])
         _g = []
         _g1 = 0
         _g2 = self.actions
         while (_g1 < len(_g2)):
             action = (_g2[_g1] if _g1 >= 0 and _g1 < len(_g2) else None)
             _g1 = (_g1 + 1)
-            if action.isVisible(state):
+            if action.isVisible(state,room,roomState):
                 _g.append(action)
         return _g
 
 
 
 class backend_GlobalData:
+    _hx_class_name = "backend.GlobalData"
     __slots__ = ()
+    _hx_statics = ["floorSize", "rooms", "mainMenuScreen", "gameScreen", "loadScreen", "enemyStats", "Init"]
 
     @staticmethod
     def Init():
@@ -220,10 +706,18 @@ class backend_GlobalData:
         backend_GlobalData.rooms[0][0] = val
         val = backend_Room.Empty
         backend_GlobalData.rooms[1][0] = val
+        val = backend_Room.Empty
+        backend_GlobalData.rooms[0][1] = val
+        val = backend_Room.Empty
+        backend_GlobalData.rooms[1][1] = val
+        val = backend_Room.Trap(20,40,10)
+        backend_GlobalData.rooms[2][1] = val
 
 
 class backend__Helpers_OneOf_Impl_:
+    _hx_class_name = "backend._Helpers.OneOf_Impl_"
     __slots__ = ()
+    _hx_statics = ["fromA", "fromB", "toA", "toB"]
 
     @staticmethod
     def fromA(a):
@@ -251,25 +745,58 @@ class backend__Helpers_OneOf_Impl_:
 
 
 class backend_Player:
-    __slots__ = ("X", "Y")
+    _hx_class_name = "backend.Player"
+    __slots__ = ("health", "agility", "X", "Y")
+    _hx_fields = ["health", "agility", "X", "Y"]
 
     def __init__(self):
         self.Y = 0
         self.X = 0
+        self.agility = 20
+        self.health = 100
 
 
 class backend_Room(Enum):
     __slots__ = ()
+    _hx_class_name = "backend.Room"
+    _hx_constructs = ["Empty", "Trap"]
+
+    @staticmethod
+    def Trap(lowerAgility,upperAgility,damage):
+        return backend_Room("Trap", 1, (lowerAgility,upperAgility,damage))
 backend_Room.Empty = backend_Room("Empty", 0, ())
+
+
+class backend__Room_Room_Fields_:
+    _hx_class_name = "backend._Room.Room_Fields_"
+    __slots__ = ()
+    _hx_statics = ["IsRoomStateful"]
+
+    @staticmethod
+    def IsRoomStateful(room):
+        tmp = room.index
+        if (tmp == 0):
+            return False
+        elif (tmp == 1):
+            _g = room.params[0]
+            _g = room.params[1]
+            _g = room.params[2]
+            return True
+        else:
+            pass
 
 class backend_ScreenActionOutcome(Enum):
     __slots__ = ()
+    _hx_class_name = "backend.ScreenActionOutcome"
+    _hx_constructs = ["GetNextOutput", "QuitGame"]
 backend_ScreenActionOutcome.GetNextOutput = backend_ScreenActionOutcome("GetNextOutput", 0, ())
 backend_ScreenActionOutcome.QuitGame = backend_ScreenActionOutcome("QuitGame", 1, ())
 
 
 class frontends_PythonFrontend:
+    _hx_class_name = "frontends.PythonFrontend"
     __slots__ = ()
+    _hx_statics = ["main"]
 
     @staticmethod
     def main():
@@ -277,11 +804,15 @@ class frontends_PythonFrontend:
 
 
 class haxe_IMap:
+    _hx_class_name = "haxe.IMap"
     __slots__ = ()
 
 
 class haxe_ds_StringMap:
+    _hx_class_name = "haxe.ds.StringMap"
     __slots__ = ("h",)
+    _hx_fields = ["h"]
+    _hx_interfaces = [haxe_IMap]
 
     def __init__(self):
         self.h = dict()
@@ -289,7 +820,10 @@ class haxe_ds_StringMap:
 
 
 class haxe_iterators_ArrayIterator:
+    _hx_class_name = "haxe.iterators.ArrayIterator"
     __slots__ = ("array", "current")
+    _hx_fields = ["array", "current"]
+    _hx_methods = ["hasNext", "next"]
 
     def __init__(self,array):
         self.current = 0
@@ -311,7 +845,9 @@ class haxe_iterators_ArrayIterator:
 
 
 class python_internal_ArrayImpl:
+    _hx_class_name = "python.internal.ArrayImpl"
     __slots__ = ()
+    _hx_statics = ["_get"]
 
     @staticmethod
     def _get(x,idx):
@@ -322,7 +858,15 @@ class python_internal_ArrayImpl:
 
 
 class HxOverrides:
+    _hx_class_name = "HxOverrides"
     __slots__ = ()
+    _hx_statics = ["eq", "stringOrNull"]
+
+    @staticmethod
+    def eq(a,b):
+        if (isinstance(a,list) or isinstance(b,list)):
+            return a is b
+        return (a == b)
 
     @staticmethod
     def stringOrNull(s):
@@ -333,7 +877,10 @@ class HxOverrides:
 
 
 class python_internal_MethodClosure:
+    _hx_class_name = "python.internal.MethodClosure"
     __slots__ = ("obj", "func")
+    _hx_fields = ["obj", "func"]
+    _hx_methods = ["__call__"]
 
     def __init__(self,obj,func):
         self.obj = obj
@@ -343,47 +890,93 @@ class python_internal_MethodClosure:
         return self.func(self.obj,*args)
 
 
+Math.NEGATIVE_INFINITY = float("-inf")
+Math.POSITIVE_INFINITY = float("inf")
+Math.NaN = float("nan")
+Math.PI = python_lib_Math.pi
 
 backend_Entity.MaximumStat = 100
+python_Boot.keywords = set(["and", "del", "from", "not", "with", "as", "elif", "global", "or", "yield", "assert", "else", "if", "pass", "None", "break", "except", "import", "raise", "True", "class", "exec", "in", "return", "False", "continue", "finally", "is", "try", "def", "for", "lambda", "while"])
+python_Boot.prefixLength = len("_hx_")
 backend_GlobalData.floorSize = 5
 backend_GlobalData.rooms = ([None]*backend_GlobalData.floorSize)
-backend_GlobalData.mainMenuVisitCount = 0
 def _hx_init_backend_GlobalData_mainMenuScreen():
-    def _hx_local_3(state):
-        body = ((("Untitled text adventure game\n" + "----------------------------\n") + "By the UTAS Programming Club\n\n") + "Currently unimplemented :(")
-        if (backend_GlobalData.mainMenuVisitCount > 0):
-            body = (str(body) + HxOverrides.stringOrNull((("\n\nReload count: " + str(backend_GlobalData.mainMenuVisitCount)))))
-        _hx_local_1 = backend_GlobalData
-        _hx_local_2 = _hx_local_1.mainMenuVisitCount
-        _hx_local_1.mainMenuVisitCount = (_hx_local_2 + 1)
-        _hx_local_2
-        return body
-    return backend_ActionScreen(haxe_ds_Either.Right(_hx_local_3))
+    def _hx_local_0(state):
+        state.inGame = False
+        return ((("Untitled text adventure game\n" + "----------------------------\n") + "By the UTAS Programming Club\n\n") + "Currently unimplemented :(")
+    return backend_ActionScreen(haxe_ds_Either.Right(_hx_local_0))
 backend_GlobalData.mainMenuScreen = _hx_init_backend_GlobalData_mainMenuScreen()
 def _hx_init_backend_GlobalData_gameScreen():
-    def _hx_local_0(state):
-        return (((("This is the game, you are in room [" + str(((state.player.X + 1)))) + ", ") + str(((state.player.Y + 1)))) + "].")
-    def _hx_local_1(state):
-        if (state.player.Y == ((backend_GlobalData.floorSize - 1))):
+    def _hx_local_2(state):
+        if (not state.inGame):
+            state.SetupGame()
+        tmp = (state.player.X + 1)
+        body = None
+        if (tmp is None):
+            body = "null"
+        else:
+            _hx_int = tmp
+            body = Std.string(((4294967296.0 + _hx_int) if ((_hx_int < 0)) else (_hx_int + 0.0)))
+        tmp = (state.player.Y + 1)
+        body1 = None
+        if (tmp is None):
+            body1 = "null"
+        else:
+            _hx_int = tmp
+            body1 = Std.string(((4294967296.0 + _hx_int) if ((_hx_int < 0)) else (_hx_int + 0.0)))
+        body2 = (((("This is the game, you are in room [" + ("null" if body is None else body)) + ", ") + ("null" if body1 is None else body1)) + "].")
+        room = backend_GlobalData.rooms[state.player.Y][state.player.X]
+        if (room is None):
+            raise haxe_Exception((("Unknown room " + Std.string(room)) + " recevied"))
+        else:
+            tmp = room.index
+            if (tmp == 0):
+                pass
+            elif (tmp == 1):
+                _g = room.params[0]
+                _g = room.params[1]
+                _g = room.params[2]
+                if state.roomState[state.player.Y][state.player.X]:
+                    body2 = (Std.string(body2) + "\n\nTriggered")
+                else:
+                    body2 = (Std.string(body2) + "\n\nNot triggered")
+            else:
+                pass
+        return body2
+    def _hx_local_3(state,_,_1):
+        if (state.player.Y == (backend_GlobalData.floorSize - 1)):
             return False
         room = backend_GlobalData.rooms[(state.player.Y + 1)][state.player.X]
         return (room is not None)
-    def _hx_local_2(state):
-        if (state.player.X == ((backend_GlobalData.floorSize - 1))):
+    def _hx_local_4(state,_,_1):
+        if (state.player.X == (backend_GlobalData.floorSize - 1)):
             return False
         room = backend_GlobalData.rooms[state.player.Y][(state.player.X + 1)]
         return (room is not None)
-    def _hx_local_3(state):
+    def _hx_local_5(state,_,_1):
         if (state.player.Y == 0):
             return False
         room = backend_GlobalData.rooms[(state.player.Y - 1)][state.player.X]
         return (room is not None)
-    def _hx_local_4(state):
+    def _hx_local_6(state,_,_1):
         if (state.player.X == 0):
             return False
         room = backend_GlobalData.rooms[state.player.Y][(state.player.X - 1)]
         return (room is not None)
-    return backend_ActionScreen(haxe_ds_Either.Right(_hx_local_0),[backend_ScreenAction("Go North",backend_ScreenActionType.GoNorth,_hx_local_1), backend_ScreenAction("Go East",backend_ScreenActionType.GoEast,_hx_local_2), backend_ScreenAction("Go South",backend_ScreenActionType.GoSouth,_hx_local_3), backend_ScreenAction("Go West",backend_ScreenActionType.GoWest,_hx_local_4), backend_ScreenAction("Quit",backend_ScreenActionType.GotoScreen(backend_GlobalData.mainMenuScreen))])
+    def _hx_local_7(state,room,roomState):
+        tmp = None
+        if (room.index == 1):
+            _g = room.params[0]
+            _g = room.params[1]
+            _g = room.params[2]
+            tmp = True
+        else:
+            tmp = False
+        if tmp:
+            return (not roomState)
+        else:
+            return False
+    return backend_ActionScreen(haxe_ds_Either.Right(_hx_local_2),[backend_ScreenAction("Go North",backend_ScreenActionType.GoNorth,_hx_local_3), backend_ScreenAction("Go East",backend_ScreenActionType.GoEast,_hx_local_4), backend_ScreenAction("Go South",backend_ScreenActionType.GoSouth,_hx_local_5), backend_ScreenAction("Go West",backend_ScreenActionType.GoWest,_hx_local_6), backend_ScreenAction("Attempt to dodge trap",backend_ScreenActionType.DodgeTrap,_hx_local_7), backend_ScreenAction("Quit",backend_ScreenActionType.GotoScreen(backend_GlobalData.mainMenuScreen))])
 backend_GlobalData.gameScreen = _hx_init_backend_GlobalData_gameScreen()
 backend_GlobalData.loadScreen = backend_ActionScreen(haxe_ds_Either.Left("Game loading is not currently supported"),[backend_ScreenAction("Quit",backend_ScreenActionType.GotoScreen(backend_GlobalData.mainMenuScreen))])
 def _hx_init_backend_GlobalData_enemyStats():
