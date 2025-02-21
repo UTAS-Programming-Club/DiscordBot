@@ -7,7 +7,7 @@
 #      List correct digits in correct places(intentially unclear if multiple) and correct digits in incorrect places
 #      ...
 
-from crescent import command, Context, option, Plugin
+from crescent import command, Context, event, option, Plugin
 from hikari import ChannelType, GatewayBot, Message, MessageCreateEvent, PartialMessage
 from hikari.snowflakes import Snowflake
 from logging import getLogger
@@ -140,7 +140,7 @@ games: dict[Snowflake, MastermindGame] = {}
 
 
 @plugin.include
-@crescent.event
+@event
 async def on_message_create(event: MessageCreateEvent):
     """Handle replies to mastermind messages containing guesses."""
     game_message: PartialMessage
