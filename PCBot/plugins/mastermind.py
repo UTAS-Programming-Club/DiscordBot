@@ -8,6 +8,7 @@
 #      ...
 
 from crescent import command, Context, event, option, Plugin
+from crescent.ext import docstrings
 from hikari import (
   ChannelType, GatewayBot, GuildThreadChannel, Message, MessageCreateEvent,
   MessageFlag, PartialMessage
@@ -45,7 +46,7 @@ class MastermindGame:
         self.number = str(
           randrange(10 ** (digit_count - 1), 10 ** digit_count)
         )
-        logger.info("Starting game with " + str(self.number))
+        logger.info('Starting game with ' + str(self.number))
 
     def add_guess(self, guess: str) -> bool:
         """Add a guess if it was not already made, reports whether it was added."""
@@ -58,11 +59,11 @@ class MastermindGame:
     def _get_guess_info_mastermind(self, guess: str) -> str:
         guess_value = int(guess)
         if guess_value < 10 ** (digit_count - 1):
-            return "Too small"
+            return 'Too small'
         elif guess_value >= 10 ** digit_count:
-            return "Too big"
+            return 'Too big'
 
-        info: str = ""
+        info: str = ''
 
         guess_digits = list(guess)
         number_digits = list(self.number)
@@ -79,13 +80,13 @@ class MastermindGame:
             number_digits.remove(number_digit)
 
         if correct_spot_digit_count == 0:
-            info += "No"
+            info += 'No'
         else:
             info += str(correct_spot_digit_count)
 
-        info += " correctly positioned digit"
+        info += ' correctly positioned digit'
         if correct_spot_digit_count != 1:
-            info += "s"
+            info += 's'
 
         incorrect_spot_digit_count: int = 0
         for guess_digit in guess_digits:
@@ -96,21 +97,21 @@ class MastermindGame:
             number_digits.remove(guess_digit)
 
         if incorrect_spot_digit_count != 0:
-            info += (" and " + str(incorrect_spot_digit_count) +
-              " correct but incorrectly positioned digit")
+            info += (' and ' + str(incorrect_spot_digit_count) +
+              ' correct but incorrectly positioned digit')
 
             if incorrect_spot_digit_count != 1:
-                info += "s"
+                info += 's'
 
         return info
 
     def _get_guess_info_higher_or_lower(self, guess: str) -> str:
         if guess > self.number:
-            return "Too big"
+            return 'Too big'
         elif guess < self.number:
-            return "Too small"
+            return 'Too small'
         else:
-            return "Correct"
+            return 'Correct'
 
     def _get_guess_info(self, guess: str) -> str:
         if higher_or_lower:
@@ -142,17 +143,17 @@ class MastermindGame:
         status += '\n'
 
         # Line 5
-        status += "Guesses:```"
+        status += 'Guesses:```'
 
         for guess in self.guesses:
-            status += "\n" + guess + ": " + self._get_guess_info(guess)
+            status += '\n' + guess + ': ' + self._get_guess_info(guess)
 
         if self.number == self.guesses[-1]:
-            status += "\n\nYou win!"
+            status += '\n\nYou win!'
             games.pop(self.message.id, None)
             games.pop(self.message.channel_id, None)
 
-        return status + "```"
+        return status + '```'
 
 
 games: dict[Snowflake, MastermindGame] = {}
@@ -197,10 +198,11 @@ async def on_message_create(event: MessageCreateEvent):
 
 
 @plugin.include
-@command(name="mastermind")
+@docstrings.parse_doc
+@command(name='mastermind')
 class MastermindCommand:
     """
-    Start Mastermind minigame.
+    Play a game of Mastermind.
 
     Requested by Cam(camtas) & something sensible(somethingsensible).
     Implemented by something sensible(somethingsensible).
