@@ -1,6 +1,6 @@
 """This module contains the bot's mastermind minigame command."""
 
-#TODO: Add difficulties?:
+# TODO: Add difficulties?:
 #      Give number of correct digits in correct places
 #      Give number of correct digits in correct places and number of correct digits in incorrect places
 #      List correct digits in correct places(intentially unclear if multiple)
@@ -8,7 +8,10 @@
 #      ...
 
 from crescent import command, Context, event, option, Plugin
-from hikari import ChannelType, GatewayBot, Message, MessageCreateEvent, PartialMessage
+from hikari import (
+  ChannelType, GatewayBot, GuildThreadChannel, Message, MessageCreateEvent,
+  MessageFlag, PartialMessage
+)
 from hikari.snowflakes import Snowflake
 from logging import getLogger
 from random import randrange
@@ -17,7 +20,7 @@ from typing import Optional
 logger = getLogger(__name__)
 plugin = Plugin[GatewayBot, None]()
 
-#TODO: Make these a command parameter
+# TODO: Make these command parameters
 digit_count: int = 4
 higher_or_lower = False
 
@@ -52,7 +55,7 @@ class MastermindGame:
 
         return False
 
-    def _get_guess_info_mastermind(self, guess) -> str:
+    def _get_guess_info_mastermind(self, guess: str) -> str:
         guess_value = int(guess)
         if guess_value < 10 ** (digit_count - 1):
             return "Too small"
@@ -99,10 +102,9 @@ class MastermindGame:
             if incorrect_spot_digit_count != 1:
                 info += "s"
 
-
         return info
 
-    def _get_guess_info_higher_or_lower(self, guess) -> str:
+    def _get_guess_info_higher_or_lower(self, guess: str) -> str:
         if guess > self.number:
             return "Too big"
         elif guess < self.number:
@@ -110,26 +112,43 @@ class MastermindGame:
         else:
             return "Correct"
 
-    def _get_guess_info(self, guess) -> str:
+    def _get_guess_info(self, guess: str) -> str:
         if higher_or_lower:
-          return self._get_guess_info_higher_or_lower(guess)
+            return self._get_guess_info_higher_or_lower(guess)
         return self._get_guess_info_mastermind(guess)
 
     def __str__(self) -> str:
         """Produce a string to describe the current state of the game."""
-        status = "A " + str(digit_count) + " digit number has been generated."\
-          "\n\nReply to this message to make guesses."
+
+        # Line 1
+        status = 'You are playing mastermind.\n'
+
+        # Line 2
+        status += (
+          'A ' + str(digit_count) + ' digit number has been generated.\n'
+        )
+
+        # Line 3
+        if self.thread_id and self.thread_id in games:
+            status += 'Play by sending a message with a number guess.'
+        else:
+            status += 'Play by replying to this message with a number guess.'
+        status += '\n'
 
         if len(self.guesses) == 0:
             return status
 
-        status += "\n\nGuesses:```"
+        # Line 4
+        status += '\n'
+
+        # Line 5
+        status += "Guesses:```"
 
         for guess in self.guesses:
             status += "\n" + guess + ": " + self._get_guess_info(guess)
 
         if self.number == self.guesses[-1]:
-            status +="\n\nYou win!"
+            status += "\n\nYou win!"
             games.pop(self.message.id, None)
             games.pop(self.message.channel_id, None)
 
@@ -170,7 +189,7 @@ async def on_message_create(event: MessageCreateEvent):
     if not game_info.add_guess(message_text):
         await event.message.respond(
             f'Your guess {message_text} has already been made.',
-            flags=hikari.MessageFlag.EPHEMERAL
+            flags=MessageFlag.EPHEMERAL
         )
 
     await game_message.edit(str(game_info))
