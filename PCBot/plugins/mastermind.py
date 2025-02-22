@@ -68,7 +68,7 @@ class MastermindGame:
         guess_digits = list(guess)
         number_digits = list(self.number)
 
-        # list wrapping is reqired to avoid zip being lazy
+        # list wrapping is to prevent zip being lazy as the lists are modified
         paired_digits = list(zip(guess_digits, number_digits))
         correct_spot_digit_count: int = 0
         for (guess_digit, number_digit) in paired_digits:
