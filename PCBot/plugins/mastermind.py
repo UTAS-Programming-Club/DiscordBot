@@ -120,7 +120,6 @@ class MastermindGame:
 
     def __str__(self) -> str:
         """Produce a string to describe the current state of the game."""
-
         # Line 1
         status = 'You are playing mastermind.\n'
 

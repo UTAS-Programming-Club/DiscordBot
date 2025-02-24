@@ -18,13 +18,15 @@ from typing import Optional
 logger = getLogger(__name__)
 plugin = Plugin[GatewayBot, None]()
 
-word_file = 'third_party/wordlist/wordlist-20210729.txt'
+word_file = 'data/wordlist.txt'
 all_words: Optional[list[str]] = None
 vowel_words: Optional[list[str]] = None
 vowel_set: set[chr] = set("aeiou")
 
 
 class Minigame(Enum):
+    """List of minigames available to play."""
+
     MissingVowels = "Missing Vowels"
     Unscramble = "Unscramble"
 
@@ -57,8 +59,7 @@ class WordManipulationGame:
         global all_words, vowel_words
         if all_words is None or vowel_words is None:
             with open(word_file) as f:
-                all_words = [line.translate(str.maketrans('', '', '"\n'))
-                             for line in f]
+                all_words = [line.strip() for line in f]
                 # TODO: Use other _count_vowels results for difficulties
                 vowel_words = [
                   word for word in all_words if self._count_vowels(word) == 4
@@ -72,7 +73,7 @@ class WordManipulationGame:
         match self.minigame:
             case Minigame.MissingVowels:
                 self.word = choice(vowel_words)
-                self.manipulated_word =  self._remove_vowels(self.word)
+                self.manipulated_word = self._remove_vowels(self.word)
             case Minigame.Unscramble:
                 self.word = choice(all_words)
                 self.manipulated_word = "".join(
@@ -122,7 +123,6 @@ class WordManipulationGame:
 
     def __str__(self) -> str:
         """Produce a string to describe the current state of the game."""
-
         # Line 1
         status = 'You are playing word manipulation.\n'
 
