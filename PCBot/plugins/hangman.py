@@ -18,7 +18,7 @@ plugin = crescent.Plugin[hikari.GatewayBot, None]()
 
 max_mistake_count = 5
 
-word_file = 'third_party/wordlist/wordlist-20210729.txt'
+word_file = 'data/wordlist.txt'
 word_count: Optional[int] = None
 
 
@@ -50,7 +50,7 @@ class HangmanGame:
         self.word = linecache.getline(word_file, line_num)
         if '' == self.word:
             raise Exception('Failed to load random word')
-        self.word = self.word.translate(str.maketrans('', '', '"\n'))
+        self.word = self.word.strip()
 
     def add_guess(self, guess: chr) -> bool:
         """Add a guess if it was not already made, reports whether it was added."""
