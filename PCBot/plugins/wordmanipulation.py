@@ -1,8 +1,6 @@
 """This module contains the bot's word manipulation minigame command."""
 
-from crescent import (
-  AutocompleteContext, command, Context, event, option, Plugin
-)
+from crescent import AutocompleteContext, command, Context, option, Plugin
 from crescent.ext import docstrings
 from enum import Enum
 from hikari import (
@@ -14,6 +12,7 @@ from logging import getLogger
 from random import choice, sample
 from string import ascii_lowercase
 from typing import Optional
+from PCBot.plugins.replyhandler import add_reply_handler
 
 logger = getLogger(__name__)
 plugin = Plugin[GatewayBot, None]()
@@ -164,8 +163,11 @@ class WordManipulationGame:
 games: dict[Snowflake, WordManipulationGame] = {}
 
 
-@plugin.include
-@event
+def on_plugin_load():
+    """Register word manipulation minigame with reply handler."""
+    add_reply_handler(on_message_create)
+
+
 async def on_message_create(event: MessageCreateEvent):
     """Handle replies to word manipulation messages containing guesses."""
     game_message: PartialMessage

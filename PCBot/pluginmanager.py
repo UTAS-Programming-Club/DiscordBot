@@ -66,13 +66,26 @@ def reload_plugin_manager() -> None:
     importlib.reload(module)
 
 
-def reload_plugin(
+def reload_handlers(plugin_manager: crescent.PluginManager):
+    """Reload plugins that provide functionally to other plugins."""
+    if 'PCBot.plugins.replyhandler' not in plugin_manager.plugins.keys():
+        return
+
+    reply_handler = importlib.import_module('PCBot.plugins.replyhandler')
+    reply_handler.reset_reply_handler()
+
+
+async def reload_plugin(
     plugin_manager: crescent.PluginManager, path: str, strict: bool = True
 ) -> None:
     """Reload a single plugin with error reporting but no exceptions."""
     try:
         plugin_manager.load(path, strict=strict)
         plugin_manager.load(path, refresh=True, strict=strict)
+
+        plugin = importlib.import_module(path)
+        if 'on_plugin_load' in dir(plugin):
+            plugin.on_plugin_load()
     except:
         logger.error(f'The following error occurred while loading {path}:')
         # From https://stackoverflow.com/a/45771867
@@ -121,4 +134,4 @@ async def reload_plugins(
 
     for glob_path in sorted(pathlib_path.glob(r'**/[!_]*.py')):
         plugin_path = ".".join(glob_path.as_posix()[:-3].split("/"))
-        reload_plugin(plugin_manager, plugin_path)
+        await reload_plugin(plugin_manager, plugin_path)

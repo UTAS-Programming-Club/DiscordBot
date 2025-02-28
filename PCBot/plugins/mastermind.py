@@ -7,7 +7,7 @@
 #      List correct digits in correct places(intentially unclear if multiple) and correct digits in incorrect places
 #      ...
 
-from crescent import command, Context, event, option, Plugin
+from crescent import command, Context, option, Plugin
 from crescent.ext import docstrings
 from hikari import (
   ChannelType, GatewayBot, GuildThreadChannel, Message, MessageCreateEvent,
@@ -17,6 +17,7 @@ from hikari.snowflakes import Snowflake
 from logging import getLogger
 from random import randrange
 from typing import Optional
+from PCBot.plugins.replyhandler import add_reply_handler
 
 logger = getLogger(__name__)
 plugin = Plugin[GatewayBot, None]()
@@ -158,8 +159,11 @@ class MastermindGame:
 games: dict[Snowflake, MastermindGame] = {}
 
 
-@plugin.include
-@event
+def on_plugin_load():
+    """Register mastermind minigame with reply handler."""
+    add_reply_handler(on_message_create)
+
+
 async def on_message_create(event: MessageCreateEvent):
     """Handle replies to mastermind messages containing guesses."""
     game_message: PartialMessage

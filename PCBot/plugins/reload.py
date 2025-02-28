@@ -5,7 +5,7 @@ import hikari
 import logging
 from crescent.ext import docstrings
 from PCBot.pluginmanager import (
-    get_plugin_names, reload_plugin_manager, reload_plugins
+    get_plugin_names, reload_handlers, reload_plugin_manager, reload_plugins
 )
 from typing import Optional
 
@@ -74,6 +74,7 @@ class ReloadCommand:
 
         try:
             reload_plugin_manager()
+            reload_handlers(plugins)
             await reload_plugins(plugins, plugin_folder)
             safe_mode = False
         except:
