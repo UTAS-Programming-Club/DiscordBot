@@ -43,17 +43,17 @@ class WordManipulationGame(TextGuessGame):
     """Maintain and allow guesses for a word manipulation game."""
 
     user_id: Optional[Snowflake] = None
-    in_thread: bool = False
     message: Optional[Message] = None
+    multiguesser: bool = False
+    in_thread: bool = False
 
     word: str
     manipulated_word: str
     guesses: list[str]
     minigame: Minigame
-    multiguesser: bool = False
 
     def __init__(
-      self, user_id: Snowflake, minigame: Minigame, multiguesser: bool
+      self, user_id: Snowflake, multiguesser: bool, minigame: Minigame
     ):
         """Start a word manipulation game by randomly choosing a word."""
         global all_words, vowel_words
@@ -181,13 +181,12 @@ class WordManipulationCommand:
                       autocomplete=minigame_autocomplete)
 
     multiguesser = option(bool, 'Allow anyone to guess', default=False)
-
     thread = option(bool, 'Automatically create a thread', default=False)
 
     async def callback(self, ctx: Context) -> None:
         """Handle word manipulation command being run by starting the minigame."""
         minigame = Minigame[self.minigame]
-        game = WordManipulationGame(ctx.user.id, minigame, self.multiguesser)
+        game = WordManipulationGame(ctx.user.id, self.multiguesser, minigame)
 
         thread: Optional[GuildThreadChannel] = (
           ctx.app.cache.get_thread(ctx.channel_id)

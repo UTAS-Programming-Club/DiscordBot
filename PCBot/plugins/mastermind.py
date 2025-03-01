@@ -31,12 +31,12 @@ class MastermindGame(TextGuessGame):
     """Maintain and allow guesses for a mastermind game."""
 
     user_id: Optional[Snowflake] = None
-    in_thread: bool = False
     message: Optional[Message] = None
+    multiguesser: bool = False
+    in_thread: bool = False
 
     number: str
     guesses: list[str]
-    multiguesser: bool = False
 
     def __init__(self, user_id: Snowflake, multiguesser: bool):
         """Start a mastermind game by randomly choosing a number."""
@@ -173,7 +173,6 @@ class MastermindCommand:
     """
 
     multiguesser = option(bool, 'Allow anyone to guess', default=False)
-
     thread = option(bool, 'Automatically create a thread', default=False)
 
     async def callback(self, ctx: Context) -> None:

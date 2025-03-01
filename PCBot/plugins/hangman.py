@@ -8,7 +8,7 @@ from crescent import command, Context, option, Plugin
 from crescent.ext import docstrings
 from colorama import Fore, Style
 from hikari import (
-    ChannelType, GatewayBot, Message, GuildThreadChannel, Snowflake
+  ChannelType, GatewayBot, Message, GuildThreadChannel, Snowflake
 )
 from linecache import getline
 from logging import getLogger
@@ -32,12 +32,12 @@ class HangmanGame(TextGuessGame):
     """Maintain and allow guesses for a hangman game."""
 
     user_id: Optional[Snowflake] = None
-    in_thread: bool = False
     message: Optional[Message] = None
+    multiguesser: bool = False
+    in_thread: bool = False
 
     word: str
     guesses: list[chr]
-    multiguesser: bool = False
 
     def __init__(self, user_id: Snowflake, multiguesser: bool):
         """Start a hangman mode by randomly choosing a word."""
@@ -185,7 +185,6 @@ class HangmanCommand:
     """
 
     multiguesser = option(bool, 'Allow anyone to guess', default=False)
-
     thread = option(bool, 'Automatically create a thread', default=False)
 
     async def callback(self, ctx: Context) -> None:

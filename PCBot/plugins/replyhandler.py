@@ -30,7 +30,7 @@ class TextGuessGame(ABC):
 
     @abstractmethod
     def add_guess(self, guess: str) -> GuessOutcome:
-        """Add a guess if it was not already made, reports whether it was added."""
+        """Add a guess if it was not already made and reports any issues."""
         pass
 
     @abstractmethod
