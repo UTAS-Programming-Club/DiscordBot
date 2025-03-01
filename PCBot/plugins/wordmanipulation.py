@@ -5,9 +5,8 @@ from crescent.ext import docstrings
 from enum import Enum
 from hikari import (
   AutocompleteInteractionOption, ChannelType, GatewayBot, GuildThreadChannel,
-  Message
+  Message, Snowflake
 )
-from hikari.snowflakes import Snowflake
 from logging import getLogger
 from random import choice, sample
 from string import ascii_lowercase
@@ -94,7 +93,7 @@ class WordManipulationGame(TextGuessGame):
         return text
 
     def add_guess(self, guess: str) -> GuessOutcome:
-        """Add a guess if it was not already made, reports whether it was added."""
+        """Add a guess if it was not already made and reports any issues."""
         processed_guess: str = guess.strip().casefold()
 
         if set(processed_guess) - set(ascii_lowercase) != set():
@@ -181,13 +180,9 @@ class WordManipulationCommand:
     minigame = option(str, 'Which word manipulation minigame to start',
                       autocomplete=minigame_autocomplete)
 
-    multiguesser = option(
-      bool, 'Allow anyone to guess', default=False
-    )
+    multiguesser = option(bool, 'Allow anyone to guess', default=False)
 
-    thread = option(
-      bool, 'Automatically create a thread', default=False
-    )
+    thread = option(bool, 'Automatically create a thread', default=False)
 
     async def callback(self, ctx: Context) -> None:
         """Handle word manipulation command being run by starting the minigame."""

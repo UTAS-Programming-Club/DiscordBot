@@ -3,10 +3,10 @@
 from abc import ABC, abstractmethod
 from abcattrs import Abstract, abstractattrs
 from crescent import event, Plugin
-from collections.abc import Awaitable, Callable
 from enum import Enum
-from hikari import GatewayBot, Message, MessageCreateEvent, MessageFlag
-from hikari.snowflakes import Snowflake
+from hikari import (
+  GatewayBot, Message, MessageCreateEvent, MessageFlag, Snowflake
+)
 from typing import Optional
 
 plugin = Plugin[GatewayBot, None]()

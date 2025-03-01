@@ -9,8 +9,9 @@
 
 from crescent import command, Context, option, Plugin
 from crescent.ext import docstrings
-from hikari import ChannelType, GatewayBot, GuildThreadChannel, Message
-from hikari.snowflakes import Snowflake
+from hikari import (
+  ChannelType, GatewayBot, GuildThreadChannel, Message, Snowflake
+)
 from logging import getLogger
 from random import randrange
 from typing import Optional
@@ -49,7 +50,7 @@ class MastermindGame(TextGuessGame):
         logger.info('Starting game with ' + str(self.number))
 
     def add_guess(self, guess: str) -> GuessOutcome:
-        """Add a guess if it was not already made, reports whether it was added."""
+        """Add a guess if it was not already made and reports any issues."""
         processed_guess: str = guess.strip()
 
         if not processed_guess.isdecimal():
@@ -103,7 +104,7 @@ class MastermindGame(TextGuessGame):
 
         if incorrect_spot_digit_count != 0:
             info += (' and ' + str(incorrect_spot_digit_count) +
-              ' correct but incorrectly positioned digit')
+                     ' correct but incorrectly positioned digit')
 
             if incorrect_spot_digit_count != 1:
                 info += 's'
@@ -171,13 +172,9 @@ class MastermindCommand:
     Implemented by something sensible(somethingsensible).
     """
 
-    multiguesser = option(
-      bool, 'Allow anyone to guess', default=False
-    )
+    multiguesser = option(bool, 'Allow anyone to guess', default=False)
 
-    thread = option(
-      bool, 'Automatically create a thread', default=False
-    )
+    thread = option(bool, 'Automatically create a thread', default=False)
 
     async def callback(self, ctx: Context) -> None:
         """Handle mastermind command being run by starting the minigame."""
