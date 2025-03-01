@@ -222,6 +222,6 @@ class WordManipulationCommand:
                 add_game(thread.id, game)
                 game.in_thread = True
 
-        game.message = await ctx.respond(str(game), ensure_message=True)
+            game.message = await ctx.respond(str(game), ensure_message=True)
 
         add_game(game.message.id, game)

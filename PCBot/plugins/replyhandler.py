@@ -39,29 +39,15 @@ class TextGuessGame(ABC):
         pass
 
 
-# Cannot assign values here because the assignments
+# Cannot assign a value here because the assignment
 # would happen every time this module is imported
-reply_handlers: Optional[
-  list[Callable[[MessageCreateEvent], Awaitable[None]]]
-]
 games: Optional[dict[Snowflake, TextGuessGame]]
 
 
 def reset_reply_handler():
-    """Reset list of reply handlers on bot start and reload."""
-    global reply_handlers, games
-    reply_handlers = []
+    """Reset list of text based games on bot start and reload."""
+    global games
     games = {}
-
-
-# TODO: Remove
-def add_reply_handler(
-  func: Callable[[MessageCreateEvent], Awaitable[None]]
-):
-    """Add reply handler to be called when a reply is received."""
-    if 'reply_handlers' not in globals():
-        reset_reply_handler()
-    reply_handlers.append(func)
 
 
 def add_game(id: Snowflake, game: TextGuessGame):
@@ -82,11 +68,8 @@ def remove_game(id: Snowflake):
 @event
 async def on_message_create(event: MessageCreateEvent):
     """Pass messages to each registered reply handler."""
-    if 'games' not in globals() or 'reply_handlers' not in globals():
+    if 'games' not in globals():
         return
-
-    for reply_handler in reply_handlers:
-        await reply_handler(event)
 
     game_message: PartialMessage
     if event.message.referenced_message is not None:
