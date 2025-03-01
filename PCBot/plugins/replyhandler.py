@@ -5,11 +5,12 @@ from abcattrs import Abstract, abstractattrs
 from crescent import event, Plugin
 from collections.abc import Awaitable, Callable
 from enum import Enum
-from hikari import GatewayBot, Message, MessageCreateEvent
+from hikari import GatewayBot, Message, MessageCreateEvent, MessageFlag
 from hikari.snowflakes import Snowflake
 from typing import Optional
 
 plugin = Plugin[GatewayBot, None]()
+
 
 class GuessOutcome(Enum):
     """List of outcomes of the add_guess function for text based games."""
@@ -17,6 +18,7 @@ class GuessOutcome(Enum):
     Valid       = 1
     Invalid     = 2
     AlreadyMade = 3
+
 
 @abstractattrs
 class TextGuessGame(ABC):
@@ -50,6 +52,7 @@ def reset_reply_handler():
     global reply_handlers, games
     reply_handlers = []
     games = {}
+
 
 # TODO: Remove
 def add_reply_handler(
