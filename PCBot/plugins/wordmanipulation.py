@@ -43,16 +43,15 @@ async def minigame_autocomplete(
 class WordManipulationGame(TextGuessGame):
     """Maintain and allow guesses for a word manipulation game."""
 
-    user_id: Snowflake
-    # TODO: Replace with in_thread: bool
-    thread_id: Optional[Snowflake] = None
+    user_id: Optional[Snowflake] = None
+    in_thread: bool = False
     message: Optional[Message] = None
 
     word: str
     manipulated_word: str
     guesses: list[str]
     minigame: Minigame
-    multiguesser: bool
+    multiguesser: bool = False
 
     def __init__(
       self, user_id: Snowflake, minigame: Minigame, multiguesser: bool
@@ -142,11 +141,11 @@ class WordManipulationGame(TextGuessGame):
         status += self.manipulated_word + '\n'
 
         # Line 3
-        # if self.thread_id and self.thread_id in games:
-        #     status += 'Play by sending a message with a word guess.'
-        # else:
-        status += 'Play by replying to this message with a word guess.'
-        status += '\n'
+        if self.in_thread:
+            status += 'Play by sending a message with a word guess.'
+        else:
+          status += 'Play by replying to this message with a word guess.'
+          status += '\n'
 
         if len(self.guesses) == 0:
             return status
@@ -195,33 +194,33 @@ class WordManipulationCommand:
         minigame = Minigame[self.minigame]
         game = WordManipulationGame(ctx.user.id, minigame, self.multiguesser)
 
-        # thread: Optional[GuildThreadChannel] = (
-        #   ctx.app.cache.get_thread(ctx.channel_id)
-        # )
-        # if thread is None:
-        #     thread = await ctx.app.rest.fetch_channel(ctx.channel_id)
-        # in_thread: bool = (
-        #   thread is not None and thread.type is ChannelType.GUILD_PUBLIC_THREAD
-        #   and thread.name == 'Words'
-        # )
+        thread: Optional[GuildThreadChannel] = (
+          ctx.app.cache.get_thread(ctx.channel_id)
+        )
+        if thread is None:
+            thread = await ctx.app.rest.fetch_channel(ctx.channel_id)
+        in_thread: bool = (
+          thread is not None and thread.type is ChannelType.GUILD_PUBLIC_THREAD
+          and thread.name == 'Words'
+        )
 
-        # if not in_thread and self.thread:
-        #     # TODO: Avoid this message
-        #     await ctx.respond(
-        #       'Starting word manipulation game in thread!', ephemeral=True
-        #     )
-        #
-        #     thread = await ctx.app.rest.create_thread(
-        #       ctx.channel_id, ChannelType.GUILD_PUBLIC_THREAD, 'Words'
-        #     )
-        #     games[thread.id] = game
-        #     game.thread_id = thread.id
-        #
-        #     game.message = await thread.send(str(game))
-        # else:
-        #     if in_thread:
-        #         games[thread.id] = game
-        #         game.thread_id = thread.id
+        if not in_thread and self.thread:
+            # TODO: Avoid this message
+            await ctx.respond(
+              'Starting word manipulation game in thread!', ephemeral=True
+            )
+
+            thread = await ctx.app.rest.create_thread(
+              ctx.channel_id, ChannelType.GUILD_PUBLIC_THREAD, 'Words'
+            )
+            add_game(thread.id, game)
+            game.in_thread = True
+
+            game.message = await thread.send(str(game))
+        else:
+            if in_thread:
+                add_game(thread.id, game)
+                game.in_thread = True
 
         game.message = await ctx.respond(str(game), ensure_message=True)
 

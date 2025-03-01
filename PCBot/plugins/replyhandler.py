@@ -22,7 +22,9 @@ class GuessOutcome(Enum):
 class TextGuessGame(ABC):
     """Base class for games supporting text based guessing."""
 
+    user_id: Abstract[Optional[Snowflake]]
     message: Abstract[Optional[Message]]
+    multiguesser: Abstract[bool]
 
     @abstractmethod
     def add_guess(self, guess: str) -> GuessOutcome:
@@ -95,6 +97,10 @@ async def on_message_create(event: MessageCreateEvent):
         return
     game_info: TextGuessGame = games[game_message.id]
 
+    if (not game_info.multiguesser
+          and event.message.author.id != game_info.user_id):
+        return
+
     if event.message.content is None:
         return
     message_text: str = event.message.content
@@ -102,7 +108,7 @@ async def on_message_create(event: MessageCreateEvent):
     outcome: GuessOutcome = game_info.add_guess(message_text)
     match outcome:
         case GuessOutcome.AlreadyMade:
-            # TODO: Check if ephmeral replies can even work, switch to a new message?
+            # TODO: Check if ephemeral replies can even work, switch to a new message?
             await event.message.respond(
               f'Your guess {message_text} has already been made.',
               flags=MessageFlag.EPHEMERAL
