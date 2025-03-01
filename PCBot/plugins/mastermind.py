@@ -135,11 +135,12 @@ class MastermindGame(TextGuessGame):
         )
 
         # Line 3
+        status += 'Play by '
         if self.in_thread:
-            status += 'Play by sending a message with a number guess.'
+            status += 'sending a'
         else:
-            status += 'Play by replying to this message with a number guess.'
-        status += '\n'
+            status += 'replying to this'
+        status += 'message with a number guess.\n'
 
         if len(self.guesses) == 0:
             return status

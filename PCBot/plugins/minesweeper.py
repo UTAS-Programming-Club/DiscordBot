@@ -21,7 +21,6 @@ from enum import Enum
 from hikari import (
   ButtonStyle, ChannelType, GatewayBot, Message, GuildThreadChannel, Snowflake
 )
-from inspect import cleandoc
 from miru import ViewContext
 from miru.ext import menu
 from random import randrange
@@ -339,16 +338,21 @@ class MinesweeperGame(TextGuessGame):
         return GuessOutcome.Valid
 
     def __str__(self) -> str:
-        status: str = cleandoc(
-          '''You are playing minesweeper.
-          Play using either the buttons below or by replying with a
-          message like C7 to reveal a square or fB2 to flag instead.'''
-        )
+        # line 1
+        status = 'You are playing minesweeper.\n'
+
+        # line 2:
+        status += 'Play using either the buttons below or by '
+        if self.in_thread:
+            status += 'sending'
+        else:
+            status += 'replying with'
+        status += ' a message like C7 to reveal a square or fB2 to flag instead.\n'
 
         if (self.last_column is not None and self.last_row is not None
             and self.last_option is not None
             and self.last_input_method is not None):
-                status += '\n\nThe last move to was to '
+                status += '\nThe last move to was to '
 
                 match self.last_option:
                     case MinesweeperOption.FLAG:
@@ -374,9 +378,9 @@ class MinesweeperGame(TextGuessGame):
                         status += 'the buttons'
                     case MinesweeperInputMethod.REPLY:
                         status += 'reply'
-                status += '.'
+                status += '\n.'
 
-        status += f'\n{self.grid}'
+        status += str(self.grid)
 
         match self.status:
             case MinesweeperGameStatus.LOST:
@@ -579,15 +583,10 @@ class MinesweeperCommand:
     async def callback(self, ctx: Context) -> None:
         """Handle minesweeper command being run by showing grid and buttons."""
         minesweeper_menu = menu.Menu()
-
         screen = MinesweeperScreen(
           minesweeper_menu, ctx.user.id, self.multiguesser, self.grid_size,
           self.bomb_count
         )
-        screen_builder = await minesweeper_menu.build_response_async(
-            plugin.model.miru, screen
-        )
-        game_screens[screen.game] = screen
 
         thread: Optional[GuildThreadChannel] = (
           ctx.app.cache.get_thread(ctx.channel_id)
@@ -599,6 +598,12 @@ class MinesweeperCommand:
           and thread.name == 'Minesweeper'
         )
 
+        screen.game.in_thread = in_thread or self.thread
+        screen_builder = await minesweeper_menu.build_response_async(
+            plugin.model.miru, screen
+        )
+        game_screens[screen.game] = screen
+
         if not in_thread and self.thread:
             # TODO: Avoid this message
             await ctx.respond(
@@ -609,13 +614,11 @@ class MinesweeperCommand:
               ctx.channel_id, ChannelType.GUILD_PUBLIC_THREAD, 'Minesweeper'
             )
             add_game(thread.id, screen.game)
-            screen.game.in_thread = True
 
             screen.game.message = await screen_builder.send_to_channel(thread)
         else:
             if in_thread:
                 add_game(thread.id, screen.game)
-                screen.game.in_thread = True
 
             screen.game.message = await ctx.respond_with_builder(
               screen_builder, ensure_message=True

@@ -83,11 +83,12 @@ class HangmanGame(TextGuessGame):
         status = 'You are playing hangman.\n'
 
         # Line 2
+        status += 'Play by '
         if self.in_thread:
-            status += 'Play by sending a message with a letter guess.'
+            status += 'sending a'
         else:
-            status += 'Play by replying to this message with a letter guess.'
-        status += '\n'
+            status += 'replying to this'
+        status += 'message with a letter guess.\n'
 
         # Line 3:
         status += '```ansi\n'
