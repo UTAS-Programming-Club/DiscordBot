@@ -75,7 +75,7 @@ def reload_handlers(plugin_manager: crescent.PluginManager):
     reply_handler.reset_reply_handler()
 
 
-async def reload_plugin(
+def reload_plugin(
     plugin_manager: crescent.PluginManager, path: str, strict: bool = True
 ) -> None:
     """Reload a single plugin with error reporting but no exceptions."""
@@ -134,4 +134,4 @@ async def reload_plugins(
 
     for glob_path in sorted(pathlib_path.glob(r'**/[!_]*.py')):
         plugin_path = ".".join(glob_path.as_posix()[:-3].split("/"))
-        await reload_plugin(plugin_manager, plugin_path)
+        reload_plugin(plugin_manager, plugin_path)
