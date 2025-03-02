@@ -2,13 +2,15 @@
 
 from abc import ABC, abstractmethod
 from abcattrs import Abstract, abstractattrs
-from crescent import event, Plugin
+from crescent import Context, event, Plugin
 from enum import Enum
 from hikari import (
-  GatewayBot, Message, MessageCreateEvent, MessageFlag, Snowflake
+  ChannelType, GatewayBot, GuildThreadChannel, Message, MessageCreateEvent,
+  MessageFlag, Snowflake, TextableGuildChannel
 )
 from typing import Optional
 
+# TODO: Is this needed?
 plugin = Plugin[GatewayBot, None]()
 
 
@@ -44,29 +46,79 @@ class TextGuessGame(ABC):
 games: Optional[dict[Snowflake, TextGuessGame]]
 
 
-def reset_reply_handler():
+def reset_reply_handler() -> None:
     """Reset list of text based games on bot start and reload."""
     global games
     games = {}
 
 
-def add_game(id: Snowflake, game: TextGuessGame):
+def add_game(id: Snowflake, game: TextGuessGame) -> None:
     """Start processing replies for a text based game."""
     if 'games' not in globals():
         reset_reply_handler()
     games[id] = game
 
 
-def remove_game(id: Snowflake):
+def remove_game(id: Snowflake) -> None:
     """Stop processing replies for a text based game."""
     if 'games' not in globals():
         return
     games.pop(id, None)
 
 
+#TODO: Try ctx.channel
+async def get_interaction_channel(ctx: Context, name: str) \
+  -> tuple[bool, Optional[TextableGuildChannel]]:
+    thread: Optional[TextableGuildChannel] = (
+      ctx.app.cache.get_thread(ctx.channel_id)
+    )
+    if thread is None:
+        thread = await ctx.app.rest.fetch_channel(ctx.channel_id)
+
+    in_correct_thread: bool = (
+      thread is not None and thread.type is ChannelType.GUILD_PUBLIC_THREAD
+      and thread.name == name
+    )
+
+    return (in_correct_thread, thread)
+
+async def send_text_message(
+  ctx: Context, want_thread: bool, name: str, game: TextGuessGame
+) -> None:
+    in_correct_thread: bool
+    channel: Optional[TextableGuildChannel]
+    in_correct_thread, channel = await get_interaction_channel(ctx, game)
+
+    message = str(game)
+
+    # TODO: Report want_thread being ignored if in wrong thread?
+    if channel.type is not ChannelType.GUILD_PUBLIC_THREAD and want_thread:
+        # TODO: Avoid this message
+        lower_name: str = name.casefold()
+        await ctx.respond(
+          f'Starting {lower_name} game in thread!', ephemeral=True
+        )
+
+        thread: GuildThreadChannel = await ctx.app.rest.create_thread(
+            ctx.channel_id, ChannelType.GUILD_PUBLIC_THREAD, name
+        )
+        game.message = await thread.send(message)
+
+        game.in_thread = True
+        add_game(thread.id, game)
+    else:
+        if in_correct_thread:
+            game.in_thread = True
+            add_game(channel.id, game)
+
+        game.message = await ctx.respond(message, ensure_message=True)
+
+    add_game(game.message.id, game)
+
+
 @plugin.include
 @event
-async def on_message_create(event: MessageCreateEvent):
+async def on_message_create(event: MessageCreateEvent) -> None:
     """Pass messages to each registered reply handler."""
     if 'games' not in globals():
         return

@@ -4,15 +4,14 @@ from crescent import AutocompleteContext, command, Context, option, Plugin
 from crescent.ext import docstrings
 from enum import Enum
 from hikari import (
-  AutocompleteInteractionOption, ChannelType, GatewayBot, GuildThreadChannel,
-  Message, Snowflake
+  AutocompleteInteractionOption, GatewayBot, Message, Snowflake
 )
 from logging import getLogger
 from random import choice, sample
 from string import ascii_lowercase
 from typing import Optional
 from PCBot.plugins.replyhandler import (
-  add_game, GuessOutcome, remove_game, TextGuessGame
+  GuessOutcome, remove_game, send_text_message, TextGuessGame
 )
 
 logger = getLogger(__name__)
@@ -188,35 +187,4 @@ class WordManipulationCommand:
         """Handle word manipulation command being run by starting the minigame."""
         minigame = Minigame[self.minigame]
         game = WordManipulationGame(ctx.user.id, self.multiguesser, minigame)
-
-        thread: Optional[GuildThreadChannel] = (
-          ctx.app.cache.get_thread(ctx.channel_id)
-        )
-        if thread is None:
-            thread = await ctx.app.rest.fetch_channel(ctx.channel_id)
-        in_thread: bool = (
-          thread is not None and thread.type is ChannelType.GUILD_PUBLIC_THREAD
-          and thread.name == 'Words'
-        )
-
-        if not in_thread and self.thread:
-            # TODO: Avoid this message
-            await ctx.respond(
-              'Starting word manipulation game in thread!', ephemeral=True
-            )
-
-            thread = await ctx.app.rest.create_thread(
-              ctx.channel_id, ChannelType.GUILD_PUBLIC_THREAD, 'Words'
-            )
-            add_game(thread.id, game)
-            game.in_thread = True
-
-            game.message = await thread.send(str(game))
-        else:
-            if in_thread:
-                add_game(thread.id, game)
-                game.in_thread = True
-
-            game.message = await ctx.respond(str(game), ensure_message=True)
-
-        add_game(game.message.id, game)
+        await send_text_message(ctx, self.thread, 'Words', game)

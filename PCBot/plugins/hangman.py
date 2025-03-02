@@ -7,16 +7,14 @@
 from crescent import command, Context, option, Plugin
 from crescent.ext import docstrings
 from colorama import Fore, Style
-from hikari import (
-  ChannelType, GatewayBot, Message, GuildThreadChannel, Snowflake
-)
+from hikari import GatewayBot, Message, Snowflake
 from linecache import getline
 from logging import getLogger
 from random import randrange
 from string import ascii_lowercase
 from typing import Optional
 from PCBot.plugins.replyhandler import (
-  add_game, GuessOutcome, remove_game, TextGuessGame
+  GuessOutcome, remove_game, send_text_message, TextGuessGame
 )
 
 logger = getLogger(__name__)
@@ -191,35 +189,4 @@ class HangmanCommand:
     async def callback(self, ctx: Context) -> None:
         """Handle hangman command being run by showing the board."""
         game = HangmanGame(ctx.user.id, self.multiguesser)
-
-        thread: Optional[GuildThreadChannel] = (
-          ctx.app.cache.get_thread(ctx.channel_id)
-        )
-        if thread is None:
-            thread = await ctx.app.rest.fetch_channel(ctx.channel_id)
-        in_thread = (
-          thread is not None and thread.type is ChannelType.GUILD_PUBLIC_THREAD
-          and thread.name == 'Hangman'
-        )
-
-        if not in_thread and self.thread:
-            # TODO: Avoid this message
-            await ctx.respond(
-              'Starting hangman game in thread!', ephemeral=True
-            )
-
-            thread = await ctx.app.rest.create_thread(
-              ctx.channel_id, ChannelType.GUILD_PUBLIC_THREAD, 'Hangman'
-            )
-            add_game(thread.id, game)
-            game.in_thread = True
-
-            game.message = await thread.send(str(game))
-        else:
-            if in_thread:
-                add_game(thread.id, game)
-                game.in_thread = True
-
-            game.message = await ctx.respond(str(game), ensure_message=True)
-
-        add_game(game.message.id, game)
+        await send_text_message(ctx, self.thread, 'Hangman', game)

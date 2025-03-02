@@ -19,7 +19,8 @@ from crescent.ext import docstrings
 from dataclasses import dataclass
 from enum import Enum
 from hikari import (
-  ButtonStyle, ChannelType, GatewayBot, Message, GuildThreadChannel, Snowflake
+  ButtonStyle, ChannelType, GatewayBot, Message, GuildThreadChannel, Snowflake,
+  TextableGuildChannel
 )
 from miru import ViewContext
 from miru.ext import menu
@@ -28,7 +29,7 @@ from re import Match, IGNORECASE, search
 from typing import Awaitable, Callable, Optional
 from PCBot.botdata import BotData
 from PCBot.plugins.replyhandler import (
-  add_game, GuessOutcome, remove_game, TextGuessGame
+  add_game, get_interaction_channel, GuessOutcome, remove_game, TextGuessGame
 )
 
 plugin = Plugin[GatewayBot, BotData]()
@@ -378,7 +379,7 @@ class MinesweeperGame(TextGuessGame):
                         status += 'the buttons'
                     case MinesweeperInputMethod.REPLY:
                         status += 'reply'
-                status += '\n.'
+                status += '.\n'
 
         status += str(self.grid)
 
@@ -588,37 +589,35 @@ class MinesweeperCommand:
           self.bomb_count
         )
 
-        thread: Optional[GuildThreadChannel] = (
-          ctx.app.cache.get_thread(ctx.channel_id)
+        in_correct_thread: bool
+        channel: Optional[TextableGuildChannel]
+        in_correct_thread, channel = await get_interaction_channel(
+          ctx, 'Minesweeper'
         )
-        if thread is None:
-            thread = await ctx.app.rest.fetch_channel(ctx.channel_id)
-        in_thread: bool = (
-          thread is not None and thread.type is ChannelType.GUILD_PUBLIC_THREAD
-          and thread.name == 'Minesweeper'
-        )
+        in_thread: bool = channel.type is ChannelType.GUILD_PUBLIC_THREAD
 
-        screen.game.in_thread = in_thread or self.thread
+        screen.game.in_thread = (not in_thread and self.thread) or in_correct_thread
         screen_builder = await minesweeper_menu.build_response_async(
             plugin.model.miru, screen
         )
         game_screens[screen.game] = screen
 
+        # TODO: Report want_thread being ignored if in wrong thread?
         if not in_thread and self.thread:
             # TODO: Avoid this message
             await ctx.respond(
               'Starting minesweeper game in thread!', ephemeral=True
             )
 
-            thread = await ctx.app.rest.create_thread(
+            thread: GuildThreadChannel = await ctx.app.rest.create_thread(
               ctx.channel_id, ChannelType.GUILD_PUBLIC_THREAD, 'Minesweeper'
             )
-            add_game(thread.id, screen.game)
-
             screen.game.message = await screen_builder.send_to_channel(thread)
+
+            add_game(thread.id, screen.game)
         else:
-            if in_thread:
-                add_game(thread.id, screen.game)
+            if in_correct_thread:
+                add_game(channel.id, screen.game)
 
             screen.game.message = await ctx.respond_with_builder(
               screen_builder, ensure_message=True

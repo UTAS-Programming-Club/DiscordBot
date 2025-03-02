@@ -9,14 +9,12 @@
 
 from crescent import command, Context, option, Plugin
 from crescent.ext import docstrings
-from hikari import (
-  ChannelType, GatewayBot, GuildThreadChannel, Message, Snowflake
-)
+from hikari import GatewayBot, Message, Snowflake
 from logging import getLogger
 from random import randrange
 from typing import Optional
 from PCBot.plugins.replyhandler import (
-  add_game, GuessOutcome, remove_game, TextGuessGame
+  GuessOutcome, remove_game, send_text_message, TextGuessGame
 )
 
 logger = getLogger(__name__)
@@ -140,7 +138,7 @@ class MastermindGame(TextGuessGame):
             status += 'sending a'
         else:
             status += 'replying to this'
-        status += 'message with a number guess.\n'
+        status += ' message with a number guess.\n'
 
         if len(self.guesses) == 0:
             return status
@@ -179,35 +177,4 @@ class MastermindCommand:
     async def callback(self, ctx: Context) -> None:
         """Handle mastermind command being run by starting the minigame."""
         game = MastermindGame(ctx.user.id, self.multiguesser)
-
-        thread: Optional[GuildThreadChannel] = (
-          ctx.app.cache.get_thread(ctx.channel_id)
-        )
-        if thread is None:
-            thread = await ctx.app.rest.fetch_channel(ctx.channel_id)
-        in_thread: bool = (
-          thread is not None and thread.type is ChannelType.GUILD_PUBLIC_THREAD
-          and thread.name == 'Mastermind'
-        )
-
-        if not in_thread and self.thread:
-            # TODO: Avoid this message
-            await ctx.respond(
-              'Starting mastermind game in thread!', ephemeral=True
-            )
-
-            thread = await ctx.app.rest.create_thread(
-              ctx.channel_id, ChannelType.GUILD_PUBLIC_THREAD, 'Mastermind'
-            )
-            add_game(thread.id, game)
-            game.in_thread = True
-
-            game.message = await thread.send(str(game))
-        else:
-            if in_thread:
-                add_game(thread.id, game)
-                game.in_thread = True
-
-            game.message = await ctx.respond(str(game), ensure_message=True)
-
-        add_game(game.message.id, game)
+        await send_text_message(ctx, self.thread, 'Mastermind', game)
