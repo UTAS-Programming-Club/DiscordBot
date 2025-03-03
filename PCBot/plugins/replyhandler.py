@@ -5,8 +5,9 @@ from abcattrs import Abstract, abstractattrs
 from crescent import Context, event, Plugin
 from enum import Enum
 from hikari import (
-  ChannelType, GatewayBot, GuildThreadChannel, Message, MessageCreateEvent,
-  MessageFlag, Snowflake, TextableGuildChannel
+  ChannelType, CacheAware, GatewayBot, GuildThreadChannel, Message,
+  MessageCreateEvent, MessageFlag, PartialChannel, PartialMessage, Snowflake,
+  TextableGuildChannel
 )
 from typing import Optional
 
@@ -26,9 +27,14 @@ class GuessOutcome(Enum):
 class TextGuessGame(ABC):
     """Base class for games supporting text based guessing."""
 
-    user_id: Abstract[Optional[Snowflake]]
+    user_id: Snowflake
     message: Abstract[Optional[Message]]
-    multiguesser: Abstract[bool]
+    multiguesser: bool
+    in_thread: Abstract[bool]
+
+    def __init__(self, user_id: Snowflake, multiguesser: bool):
+        self.user_id = user_id
+        self.multiguesser = multiguesser
 
     @abstractmethod
     def add_guess(self, guess: str) -> GuessOutcome:
@@ -43,7 +49,7 @@ class TextGuessGame(ABC):
 
 # Cannot assign a value here because the assignment
 # would happen every time this module is imported
-games: Optional[dict[Snowflake, TextGuessGame]]
+games: dict[Snowflake, TextGuessGame]
 
 
 def reset_reply_handler() -> None:
@@ -66,14 +72,19 @@ def remove_game(id: Snowflake) -> None:
     games.pop(id, None)
 
 
-#TODO: Try ctx.channel
+# TODO: Try ctx.channel
 async def get_interaction_channel(ctx: Context, name: str)\
   -> tuple[bool, Optional[TextableGuildChannel]]:
-    thread: Optional[TextableGuildChannel] = (
-      ctx.app.cache.get_thread(ctx.channel_id)
-    )
+    """Fetch current channel and check if a thread for the current game."""
+    thread: Optional[TextableGuildChannel] = None
+    if isinstance(ctx.app, CacheAware):
+        thread = ctx.app.cache.get_thread(ctx.channel_id)
     if thread is None:
-        thread = await ctx.app.rest.fetch_channel(ctx.channel_id)
+        fetched_thread: Optional[PartialChannel] = (
+          await ctx.app.rest.fetch_channel(ctx.channel_id)
+        )
+        if isinstance(fetched_thread, TextableGuildChannel):
+            thread = fetched_thread
 
     in_correct_thread: bool = (
       thread is not None and thread.type is ChannelType.GUILD_PUBLIC_THREAD
@@ -82,17 +93,22 @@ async def get_interaction_channel(ctx: Context, name: str)\
 
     return (in_correct_thread, thread)
 
+
 async def send_text_message(
   ctx: Context, want_thread: bool, name: str, game: TextGuessGame
 ) -> None:
+    """Send game message in either the current channel or a new thread."""
     in_correct_thread: bool
     channel: Optional[TextableGuildChannel]
-    in_correct_thread, channel = await get_interaction_channel(ctx, game)
+    in_correct_thread, channel = await get_interaction_channel(ctx, name)
+    in_thread: bool = (
+      channel is not None and channel.type is ChannelType.GUILD_PUBLIC_THREAD
+    )
 
     message = str(game)
 
     # TODO: Report want_thread being ignored if in wrong thread?
-    if channel.type is not ChannelType.GUILD_PUBLIC_THREAD and want_thread:
+    if not in_thread and want_thread:
         # TODO: Avoid this message
         lower_name: str = name.casefold()
         await ctx.respond(
@@ -107,7 +123,7 @@ async def send_text_message(
         game.in_thread = True
         add_game(thread.id, game)
     else:
-        if in_correct_thread:
+        if channel is not None and in_correct_thread:
             game.in_thread = True
             add_game(channel.id, game)
 
@@ -127,7 +143,11 @@ async def on_message_create(event: MessageCreateEvent) -> None:
     if event.message.referenced_message is not None:
         game_message = event.message.referenced_message
     elif event.channel_id in games:
-        game_message = games[event.channel_id].message
+        thread_message: Optional[Message] = games[event.channel_id].message
+        if thread_message is not None:
+            game_message = thread_message
+        else:
+            return
     else:
         return
 

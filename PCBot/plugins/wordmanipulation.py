@@ -41,9 +41,7 @@ async def minigame_autocomplete(
 class WordManipulationGame(TextGuessGame):
     """Maintain and allow guesses for a word manipulation game."""
 
-    user_id: Optional[Snowflake] = None
     message: Optional[Message] = None
-    multiguesser: bool = False
     in_thread: bool = False
 
     word: str
@@ -55,6 +53,8 @@ class WordManipulationGame(TextGuessGame):
       self, user_id: Snowflake, multiguesser: bool, minigame: Minigame
     ):
         """Start a word manipulation game by randomly choosing a word."""
+        super(user_id, multiguesser)
+
         global all_words, vowel_words
         if all_words is None or vowel_words is None:
             with open(word_file) as f:
@@ -64,10 +64,8 @@ class WordManipulationGame(TextGuessGame):
                   word for word in all_words if self._count_vowels(word) == 4
                 ]
 
-        self.user_id = user_id
         self.guesses = []
         self.minigame = minigame
-        self.multiguesser = multiguesser
 
         match self.minigame:
             case Minigame.MissingVowels:

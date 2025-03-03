@@ -29,9 +29,7 @@ word_count: Optional[int] = None
 class HangmanGame(TextGuessGame):
     """Maintain and allow guesses for a hangman game."""
 
-    user_id: Optional[Snowflake] = None
     message: Optional[Message] = None
-    multiguesser: bool = False
     in_thread: bool = False
 
     word: str
@@ -39,14 +37,14 @@ class HangmanGame(TextGuessGame):
 
     def __init__(self, user_id: Snowflake, multiguesser: bool):
         """Start a hangman mode by randomly choosing a word."""
+        super(user_id, multiguesser)
+
         global word_count
         if word_count is None:
             with open(word_file) as f:
                 word_count = len(f.readlines())
 
-        self.user_id = user_id
         self.guesses = []
-        self.multiguesser = multiguesser
 
         line_num = randrange(word_count)
         self.word = getline(word_file, line_num)

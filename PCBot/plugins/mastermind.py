@@ -28,9 +28,7 @@ higher_or_lower = False
 class MastermindGame(TextGuessGame):
     """Maintain and allow guesses for a mastermind game."""
 
-    user_id: Optional[Snowflake] = None
     message: Optional[Message] = None
-    multiguesser: bool = False
     in_thread: bool = False
 
     number: str
@@ -38,9 +36,8 @@ class MastermindGame(TextGuessGame):
 
     def __init__(self, user_id: Snowflake, multiguesser: bool):
         """Start a mastermind game by randomly choosing a number."""
-        self.user_id = user_id
+        super(user_id, multiguesser)
         self.guesses = []
-        self.multiguesser = multiguesser
 
         self.number = str(
           randrange(10 ** (digit_count - 1), 10 ** digit_count)

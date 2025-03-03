@@ -286,9 +286,7 @@ class MinesweeperGrid:
 
 
 class MinesweeperGame(TextGuessGame):
-    user_id: Optional[Snowflake] = None
     message: Optional[Message] = None
-    multiguesser: bool = False
     in_thread: bool = False
 
     grid: MinesweeperGrid
@@ -303,8 +301,7 @@ class MinesweeperGame(TextGuessGame):
       self, user_id: Snowflake, multiguesser: bool, grid_size: int,
       bomb_count: int
     ):
-        self.user_id = user_id
-        self.multiguesser = multiguesser
+        super(user_id, multiguesser)
 
         self.grid = MinesweeperGrid(grid_size, bomb_count)
 
@@ -593,7 +590,9 @@ class MinesweeperCommand:
         in_correct_thread, channel = await get_interaction_channel(
           ctx, 'Minesweeper'
         )
-        in_thread: bool = channel.type is ChannelType.GUILD_PUBLIC_THREAD
+        in_thread: bool = (
+          channel is not None and channel.type is ChannelType.GUILD_PUBLIC_THREAD
+        )
 
         screen.game.in_thread = (not in_thread and self.thread) or in_correct_thread
         screen_builder = await minesweeper_menu.build_response_async(
@@ -615,7 +614,7 @@ class MinesweeperCommand:
 
             add_game(thread.id, screen.game)
         else:
-            if in_correct_thread:
+            if channel is not None and in_correct_thread:
                 add_game(channel.id, screen.game)
 
             screen.game.message = await ctx.respond_with_builder(
