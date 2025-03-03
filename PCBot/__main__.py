@@ -10,9 +10,7 @@ from PCBot.botdata import (
     BotData, token_path, lavalink_password_path,
     guild_id_path, get_token_file_path, ongaku_available
 )
-from PCBot.pluginmanager import (
-  get_plugin_info, print_plugin_info, reload_plugins
-)
+from PCBot.pluginmanager import reload_plugins
 # from PCBot.testing.mocking import mock_command
 # from PCBot.testing.hikari.test_users_comparision import (
 #   make_interactions_member
@@ -65,8 +63,9 @@ async def load_plugins():
 # For running the bot
 crescent_client._run_future(load_plugins())
 
-plugin_info = get_plugin_info(crescent_client.plugins)
-print_plugin_info(plugin_info)
+# TODO: Fix
+# plugin_info = get_plugin_info(crescent_client.plugins)
+# print_plugin_info(plugin_info)
 
 # Run the bot
 if __name__ == '__main__':

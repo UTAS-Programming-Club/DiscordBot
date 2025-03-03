@@ -2,22 +2,24 @@
 
 from collections import Counter
 from crescent import Plugin, PluginManager
-from crescent.internal import AppCommand, AppCommandMeta, Includable
+from crescent.internal import AppCommandMeta, Includable
 from hikari import GatewayBot
 from importlib import import_module, reload
+from importlib.abc import ExecutionLoader, Loader
 from importlib.machinery import ModuleSpec
 from importlib.util import find_spec
 from logging import getLogger, Logger
 from pathlib import Path
 from sys import exc_info
 from traceback import extract_tb, format_exc, FrameSummary, StackSummary
-from typing import Any
+from types import ModuleType
+from typing import Any, Optional
 
 # TODO: Avoid unloading reload.py
 # TODO: Specifically list which exceptions are possible during plugin loading
 # TODO: Use same error reporting in reload_plugin_manager as reload_plugin
 # TODO: Fix the get_plugin_names() list being out of order while in safe mode
-# TODO: Make get_plugin_info return be dict[str, dict[str, AppCommandMeta]]?
+# TODO: Make get_plugin_info return be dict[str, dict[str, AppCommandMeta, ...]]?
 #       This would make parts of help much easier to implement
 
 logger: Logger = getLogger(__name__)
@@ -32,9 +34,9 @@ def get_plugin_names(plugin_manager: PluginManager) -> Counter[str]:
 # not find another way to access command info without manually finding all
 # classes and functions with plugin.include which I assume is possible
 def get_plugin_info(plugin_manager: PluginManager)\
- -> dict[str, tuple[AppCommandMeta]]:
+ -> dict[str, tuple[AppCommandMeta, ...]]:
     """Provide a list of loaded plugins along with their commands."""
-    loaded_commands: dict[str, tuple[AppCommandMeta]] = {}
+    loaded_commands: dict[str, tuple[AppCommandMeta, ...]] = {}
     plugin_name: str
     plugin: Plugin[GatewayBot, Any]
     for plugin_name, plugin in plugin_manager.plugins.items():
@@ -46,16 +48,17 @@ def get_plugin_info(plugin_manager: PluginManager)\
     return loaded_commands
 
 
-def print_plugin_info(plugin_info: dict[str, tuple[AppCommand]]) -> None:
-    """Print the name of each plugin along with their commands."""
-    plugin_name: str
-    commands: tuple[AppCommand]
-    for plugin_name, commands in plugin_info.items():
-        print(plugin_name)
-        command: AppCommand
-        for command in commands:
-            app_command = command.app_command
-            print(f'    {app_command.name}: {app_command.description}')
+# TODO: Fix, only used in __main__ where plugin_info.items() is []
+# def print_plugin_info(plugin_info: dict[str, tuple[AppCommand]]) -> None:
+#     """Print the name of each plugin along with their commands."""
+#     plugin_name: str
+#     commands: tuple[AppCommand]
+#     for plugin_name, commands in plugin_info.items():
+#         print(plugin_name)
+#         command: AppCommand
+#         for command in commands:
+#             app_command = command.app_command
+#             print(f'    {app_command.name}: {app_command.description}')
 
 
 # I planned to implement this using get_plugin_info but decided this was easier
@@ -73,7 +76,7 @@ def get_command_choices(plugin_manager: PluginManager)\
 
 def reload_plugin_manager() -> None:
     """Reload this module."""
-    module: module = import_module(__name__)
+    module: ModuleType = import_module(__name__)
     reload(module)
 
 
@@ -82,7 +85,7 @@ def reload_handlers(plugin_manager: PluginManager):
     if 'PCBot.plugins.replyhandler' not in plugin_manager.plugins.keys():
         return
 
-    reply_handler: module = import_module('PCBot.plugins.replyhandler')
+    reply_handler: ModuleType = import_module('PCBot.plugins.replyhandler')
     reply_handler.reset_reply_handler()
 
 
@@ -97,12 +100,17 @@ def reload_plugin(
         logger.error(f'The following error occurred while loading {path}:')
         # From https://stackoverflow.com/a/45771867
         # Try to find first trace line within erroring plugin
-        spec: ModuleSpec = find_spec(path)
+        spec: Optional[ModuleSpec] = find_spec(path)
         if spec is None:
             # If failed to find plugin then just print entire traceback
             print(format_exc())
         else:
-            file_name: str = spec.loader.get_filename()
+            loader: Optional[Loader] = spec.loader
+            if not isinstance(loader, ExecutionLoader):
+                # If failed to get data from loader then just print entire traceback
+                print(format_exc())
+                return
+            file_name: str = loader.get_filename()  # pyright: ignore [reportCallIssue]
             extracts: StackSummary = extract_tb(exc_info()[2])
             count: int = len(extracts)
             # Find the first occurrence of the plugin file name
