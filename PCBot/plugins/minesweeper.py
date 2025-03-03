@@ -563,11 +563,10 @@ game_screens: dict[MinesweeperGame, MinesweeperScreen] = {}
 @command(name='minesweeper')
 class MinesweeperCommand:
     """
-    Play Minesweeper.
+    Play a game of Minesweeper.
 
-    Requested by Camtas(camtas).
-    Implemented by something sensible(somethingsensible) &
-                   Camtas(camtas).
+    Requested by Cam(camtas).
+    Implemented by Cam(camtas) & Joshua(somethingsensible).
     """
 
     grid_size = option(

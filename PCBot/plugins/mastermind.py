@@ -10,14 +10,14 @@
 from crescent import command, Context, option, Plugin
 from crescent.ext import docstrings
 from hikari import GatewayBot, Message, Snowflake
-from logging import getLogger
+from logging import getLogger, Logger
 from random import randrange
 from typing import Optional
 from PCBot.plugins.replyhandler import (
   GuessOutcome, remove_game, send_text_message, TextGuessGame
 )
 
-logger = getLogger(__name__)
+logger: Logger = getLogger(__name__)
 plugin = Plugin[GatewayBot, None]()
 
 # TODO: Make these command parameters
@@ -167,8 +167,8 @@ class MastermindCommand:
     """
     Play a game of Mastermind.
 
-    Requested by Cam(camtas) & something sensible(somethingsensible).
-    Implemented by something sensible(somethingsensible).
+    Requested by Cam(camtas) & Joshua(somethingsensible).
+    Implemented by Joshua(somethingsensible).
     """
 
     multiguesser = option(bool, 'Allow anyone to guess', default=False)

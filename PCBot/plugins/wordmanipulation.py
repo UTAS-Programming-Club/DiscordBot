@@ -6,7 +6,7 @@ from enum import Enum
 from hikari import (
   AutocompleteInteractionOption, GatewayBot, Message, Snowflake
 )
-from logging import getLogger
+from logging import getLogger, Logger
 from random import choice, sample
 from string import ascii_lowercase
 from typing import Optional
@@ -14,7 +14,7 @@ from PCBot.plugins.replyhandler import (
   GuessOutcome, remove_game, send_text_message, TextGuessGame
 )
 
-logger = getLogger(__name__)
+loggerr: Logger = getLogger(__name__)
 plugin = Plugin[GatewayBot, None]()
 
 word_file = 'data/wordlist.txt'
@@ -173,8 +173,8 @@ class WordManipulationCommand:
     """
     Play a word manipulation minigame.
 
-    Requested by Cam(camtas) & something sensible(somethingsensible).
-    Implemented by something sensible(somethingsensible).
+    Requested by Cam(camtas) & Joshua(somethingsensible).
+    Implemented by Joshua(somethingsensible).
     """
 
     minigame = option(str, 'Which word manipulation minigame to start',

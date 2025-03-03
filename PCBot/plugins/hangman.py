@@ -9,7 +9,7 @@ from crescent.ext import docstrings
 from colorama import Fore, Style
 from hikari import GatewayBot, Message, Snowflake
 from linecache import getline
-from logging import getLogger
+from logging import getLogger, Logger
 from random import randrange
 from string import ascii_lowercase
 from typing import Optional
@@ -17,7 +17,7 @@ from PCBot.plugins.replyhandler import (
   GuessOutcome, remove_game, send_text_message, TextGuessGame
 )
 
-logger = getLogger(__name__)
+loggerr: Logger = getLogger(__name__)
 plugin = Plugin[GatewayBot, None]()
 
 max_mistake_count = 5
@@ -177,10 +177,10 @@ class HangmanGame(TextGuessGame):
 @command(name='hangman')
 class HangmanCommand:
     """
-    Play a game of hangman.
+    Play a game of Hangman.
 
-    Requested by Clips(clippeh).
-    Implemented by something sensible(somethingsensible).
+    Requested by Oliver(clippeh).
+    Implemented by Joshua(somethingsensible).
     """
 
     multiguesser = option(bool, 'Allow anyone to guess', default=False)

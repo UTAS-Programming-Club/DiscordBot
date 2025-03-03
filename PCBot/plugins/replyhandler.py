@@ -67,7 +67,7 @@ def remove_game(id: Snowflake) -> None:
 
 
 #TODO: Try ctx.channel
-async def get_interaction_channel(ctx: Context, name: str) \
+async def get_interaction_channel(ctx: Context, name: str)\
   -> tuple[bool, Optional[TextableGuildChannel]]:
     thread: Optional[TextableGuildChannel] = (
       ctx.app.cache.get_thread(ctx.channel_id)
