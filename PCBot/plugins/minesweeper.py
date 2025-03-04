@@ -1,4 +1,5 @@
 """This module contains the bot's minesweeper minigame command."""
+# pyright: strict
 
 # TODO: Figure out why some chars stop appearing for 14x14 despite being well
 # below the length limit. I tried copying the message and reposting it and hit
@@ -105,8 +106,8 @@ class MinesweeperGrid:
         self.bomb_count = bomb_count
 
         self.grid = [
-          [MinesweeperGridCell() for column in range(self.size)]
-          for row in range(self.size)
+          [MinesweeperGridCell() for _ in range(self.size)]
+          for _ in range(self.size)
         ]
 
     def __str__(self) -> str:
@@ -167,10 +168,13 @@ class MinesweeperGrid:
                 grid_cell.state = MinesweeperGridCellState.FLAGGED
             case MinesweeperGridCellState.FLAGGED:
                 grid_cell.state = MinesweeperGridCellState.COVERED
+            case MinesweeperGridCellState.REVEALED:
+                    # TODO: Report failure
+                    pass
 
     def _generate_mines(self, except_row: int, except_column: int) -> None:
         """Randomly scatters bombs in the grid."""
-        for bomb in range(self.bomb_count):
+        for _ in range(self.bomb_count):
             while True:
                 row: int = randrange(self.size)
                 column: int = randrange(self.size)
@@ -213,7 +217,7 @@ class MinesweeperGrid:
         grid_cell: MinesweeperGridCell = self.grid[row][column]
         return grid_cell.state is MinesweeperGridCellState.REVEALED
 
-    def reveal_cell(self, row: int, column: int, flooding=False) -> None:
+    def reveal_cell(self, row: int, column: int, flooding: bool=False) -> None:
         if row >= self.size or column >= self.size:
             raise Exception(f'Cell ({row}, {column}) is out of range')
 
@@ -227,6 +231,9 @@ class MinesweeperGrid:
                 if flooding:
                     return
                 raise Exception(f'Cell ({row}, {column}) is already revealed')
+            case MinesweeperGridCellState.COVERED:
+                # TODO: Report failure
+                pass
 
         if not self.generated_mines:
             self._generate_mines(row, column)
@@ -318,7 +325,7 @@ class MinesweeperGame(TextGuessGame):
             return GuessOutcome.Invalid
         guess_groups: tuple[str, ...] = guess_matches.groups()
 
-        options: MinesweeperOption
+        option: MinesweeperOption
         if guess_groups[0].lower() == 'f':
             option = MinesweeperOption.FLAG
         else:
@@ -391,6 +398,8 @@ class MinesweeperGame(TextGuessGame):
                 status += '\n\nYou have lost the game.'
             case MinesweeperGameStatus.WON:
                 status += '\n\nYou have won the game!'
+            case MinesweeperGameStatus.STARTED:
+                pass
 
         if self.status is not MinesweeperGameStatus.STARTED:
             remove_game(self.message.id)
@@ -433,6 +442,15 @@ class MinesweeperGame(TextGuessGame):
                     self.grid.reveal_bombs()
                 elif self.grid.check_game_won():
                     self.status = MinesweeperGameStatus.WON
+            case MinesweeperOption.FAILED_FLAG_BY_REVEALED:
+                # TODO: Report failure
+                pass
+            case MinesweeperOption.FAILED_REVEAL_BY_FLAGGED:
+                # TODO: Report failure
+                pass
+            case MinesweeperOption.FAILED_REVEAL_BY_REVEALED:
+                # TODO: Report failure
+                pass
 
 
 def create_button(
@@ -441,10 +459,11 @@ def create_button(
     [menu.Screen, ViewContext, menu.ScreenButton], Awaitable[None],
   ],
   style: InteractiveButtonStylesT = ButtonStyle.PRIMARY,
-  disabled = False,
+  disabled: bool = False,
 ) -> menu.ScreenButton:
     button = menu.ScreenButton(label, style=style, disabled=disabled)
-    button.callback = lambda ctx: callback(ctx, button)
+    # TODO: Fix reportUnknownLambdaType
+    button.callback = lambda ctx: callback(ctx, button)  # pyright: ignore [reportCallIssue, reportUnknownLambdaType]
     return button
 
 
@@ -506,15 +525,17 @@ class MinesweeperScreen(menu.Screen):
                     label = chr(ord('A') + i)
                 case MinesweeperScreenStage.NUMBER:
                     label = str(i + 1)
-                case _:
+                case MinesweeperScreenStage.OPTION:
                     raise Exception(
                       f'Invalid state {self.state} found while updating' +
                       'buttons'
                     )
-            self.menu.add_item(create_button(f'{label}', self.input_pressed))  # pyright: ignore [reportArgumentType]
+            self.menu.add_item(
+              create_button(f'{label}', self.input_pressed, disabled=disable)  # pyright: ignore [reportArgumentType]
+            )
 
         self.menu.add_item(create_button(
-          'Back', self.back_pressed, style=ButtonStyle.DANGER  # pyright: ignore [reportArgumentType]
+          'Back', self.back_pressed, style=ButtonStyle.DANGER, disabled=disable  # pyright: ignore [reportArgumentType]
         ))
 
         await self.reload()
@@ -544,7 +565,7 @@ class MinesweeperScreen(menu.Screen):
             case MinesweeperScreenStage.NUMBER:
                 self.state = MinesweeperScreenStage.LETTER
                 await self.show_input_buttons()
-            case _:
+            case MinesweeperScreenStage.OPTION:
                 raise Exception(
                   f'Back button pressed during state {self.state}'
                 )
@@ -573,7 +594,7 @@ class MinesweeperScreen(menu.Screen):
                 self.option = None
                 self.column = None
                 await self.show_option_buttons()
-            case _:
+            case MinesweeperScreenStage.OPTION:
                 raise Exception(
                   f'Input button pressed during state {self.state}'
                 )

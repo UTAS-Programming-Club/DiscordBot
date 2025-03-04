@@ -1,4 +1,5 @@
 """This module contains the bot's mastermind minigame command."""
+# pyright: strict
 
 # TODO: Add difficulties?:
 #      Give number of correct digits in correct places

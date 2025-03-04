@@ -1,4 +1,5 @@
 """This module contains the bot's word manipulation minigame command."""
+# pyright: strict
 
 from crescent import AutocompleteContext, command, Context, option, Plugin
 from crescent.ext import docstrings

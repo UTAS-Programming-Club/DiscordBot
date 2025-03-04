@@ -1,4 +1,5 @@
 """This module contains functions used to handle replies to bot messages."""
+# pyright: strict
 
 from abc import ABC, abstractmethod
 from abcattrs import Abstract, abstractattrs
@@ -174,6 +175,8 @@ async def on_message_create(event: MessageCreateEvent) -> None:
             )
         case GuessOutcome.Invalid:
             return
+        case GuessOutcome.Valid:
+            pass
 
     await game_message.edit(str(game_info))
     await event.message.delete()

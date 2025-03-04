@@ -1,4 +1,5 @@
 """This module contains the bot's hangman minigame command."""
+# pyright: strict
 
 # TODO: Support multiplayer where one player provides the word and the other plays the game
 # TODO: Support versus multiplayer where two people privately play the same game and get scored based on time to win/lose

@@ -1,4 +1,5 @@
 """This module contains functions used to load and manage plugins."""
+# pyright: strict
 
 from collections import Counter
 from crescent import Plugin, PluginManager
@@ -40,10 +41,11 @@ def get_plugin_info(plugin_manager: PluginManager)\
     plugin_name: str
     plugin: Plugin[GatewayBot, Any]
     for plugin_name, plugin in plugin_manager.plugins.items():
-        child: Includable[Any]
+        # TODO: Fix reportUnusedVariable
+        child: Includable[Any]  # pyright: ignore [reportUnusedVariable]
         loaded_commands[plugin_name] = tuple([
-            child.metadata for child in plugin._children
-            if type(child.metadata) == AppCommandMeta
+            child.metadata for child in plugin._children  # pyright: ignore [reportPrivateUsage]
+            if isinstance(child.metadata, AppCommandMeta)
         ])
     return loaded_commands
 
@@ -65,12 +67,13 @@ def get_plugin_info(plugin_manager: PluginManager)\
 def get_command_choices(plugin_manager: PluginManager)\
   -> list[tuple[str, str]]:
     """Provide a listed of loaded commands as crescent autocomplete tuples."""
-    plugin: Plugin[GatewayBot, Any]
-    child: list[Includable[Any]]
+    # TODO: Fix reportUnusedVariable
+    plugin: Plugin[GatewayBot, Any]  # pyright: ignore [reportUnusedVariable]
+    child: list[Includable[Any]]  # pyright: ignore [reportUnusedVariable]
     return [
       (child.metadata.app_command.name, child.metadata.app_command.name)
       for plugin in plugin_manager.plugins.values()
-      for child in plugin._children
+      for child in plugin._children  # pyright: ignore [reportPrivateUsage]
     ]
 
 
@@ -110,7 +113,8 @@ def reload_plugin(
                 # If failed to get data from loader then just print entire traceback
                 print(format_exc())
                 return
-            file_name: str = loader.get_filename()  # pyright: ignore [reportCallIssue]
+            # TODO: Fix reportUnknownVariableType
+            file_name: str = loader.get_filename()  # pyright: ignore [reportCallIssue, reportUnknownVariableType]
             extracts: StackSummary = extract_tb(exc_info()[2])
             count: int = len(extracts)
             # Find the first occurrence of the plugin file name
