@@ -14,13 +14,13 @@ from PCBot.plugins.replyhandler import (
   GuessOutcome, remove_game, send_text_message, TextGuessGame
 )
 
-loggerr: Logger = getLogger(__name__)
+logger: Logger = getLogger(__name__)
 plugin = Plugin[GatewayBot, None]()
 
 word_file = 'data/wordlist.txt'
 all_words: Optional[list[str]] = None
 vowel_words: Optional[list[str]] = None
-vowel_set: set[chr] = set("aeiou")
+vowel_set: set[str] = set("aeiou")
 
 
 class Minigame(Enum):
@@ -53,7 +53,7 @@ class WordManipulationGame(TextGuessGame):
       self, user_id: Snowflake, multiguesser: bool, minigame: Minigame
     ):
         """Start a word manipulation game by randomly choosing a word."""
-        super(user_id, multiguesser)
+        super().__init__(user_id, multiguesser)
 
         global all_words, vowel_words
         if all_words is None or vowel_words is None:
@@ -90,6 +90,9 @@ class WordManipulationGame(TextGuessGame):
         return text
 
     def add_guess(self, guess: str) -> GuessOutcome:
+        if self.message is None:
+            return GuessOutcome.Invalid
+
         """Add a guess if it was not already made and reports any issues."""
         processed_guess: str = guess.strip().casefold()
 
@@ -125,6 +128,9 @@ class WordManipulationGame(TextGuessGame):
 
     def __str__(self) -> str:
         """Produce a string to describe the current state of the game."""
+        if self.message is None:
+            return ''
+
         # Line 1
         status = 'You are playing word manipulation.\n'
 

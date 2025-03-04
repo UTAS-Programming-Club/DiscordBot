@@ -36,7 +36,7 @@ class MastermindGame(TextGuessGame):
 
     def __init__(self, user_id: Snowflake, multiguesser: bool):
         """Start a mastermind game by randomly choosing a number."""
-        super(user_id, multiguesser)
+        super().__init__(user_id, multiguesser)
         self.guesses = []
 
         self.number = str(
@@ -46,6 +46,9 @@ class MastermindGame(TextGuessGame):
 
     def add_guess(self, guess: str) -> GuessOutcome:
         """Add a guess if it was not already made and reports any issues."""
+        if self.message is None:
+                return GuessOutcome.Invalid
+
         processed_guess: str = guess.strip()
 
         if not processed_guess.isdecimal():
@@ -121,6 +124,9 @@ class MastermindGame(TextGuessGame):
 
     def __str__(self) -> str:
         """Produce a string to describe the current state of the game."""
+        if self.message is None:
+            return ''
+
         # Line 1
         status = 'You are playing mastermind.\n'
 

@@ -17,7 +17,7 @@ from PCBot.plugins.replyhandler import (
   GuessOutcome, remove_game, send_text_message, TextGuessGame
 )
 
-loggerr: Logger = getLogger(__name__)
+logger: Logger = getLogger(__name__)
 plugin = Plugin[GatewayBot, None]()
 
 max_mistake_count = 5
@@ -33,11 +33,11 @@ class HangmanGame(TextGuessGame):
     in_thread: bool = False
 
     word: str
-    guesses: list[chr]
+    guesses: list[str]
 
     def __init__(self, user_id: Snowflake, multiguesser: bool):
         """Start a hangman mode by randomly choosing a word."""
-        super(user_id, multiguesser)
+        super().__init__(user_id, multiguesser)
 
         global word_count
         if word_count is None:
@@ -56,7 +56,7 @@ class HangmanGame(TextGuessGame):
 
     def add_guess(self, guess: str) -> GuessOutcome:
         """Add a guess if it was not already made and reports any issues."""
-        if len(guess) != 1:
+        if self.message is None or len(guess) != 1:
             return GuessOutcome.Invalid
         processed_guess = guess.casefold().replace(' ', '')[0]
 
@@ -71,6 +71,9 @@ class HangmanGame(TextGuessGame):
 
     def __str__(self) -> str:
         """Produce a string to describe the current state of the game."""
+        if self.message is None:
+            return ''
+
         mistake_count = len([
           letter for letter in self.guesses if letter not in self.word
         ])
@@ -162,8 +165,7 @@ class HangmanGame(TextGuessGame):
         if mistake_count >= max_mistake_count:
             status += f'        The answer was: {self.word}.'
 
-        if (self.message is not None and
-             (player_won or mistake_count >= max_mistake_count)):
+        if player_won or mistake_count >= max_mistake_count:
             remove_game(self.message.id)
             remove_game(self.message.channel_id)
 

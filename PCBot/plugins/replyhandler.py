@@ -128,6 +128,7 @@ async def send_text_message(
             add_game(channel.id, game)
 
         game.message = await ctx.respond(message, ensure_message=True)
+        assert game.message is not None
 
     add_game(game.message.id, game)
 

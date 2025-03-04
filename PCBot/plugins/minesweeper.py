@@ -24,6 +24,7 @@ from hikari import (
 )
 from miru import ViewContext
 from miru.ext import menu
+from miru.internal.types import InteractiveButtonStylesT
 from random import randrange
 from re import Match, IGNORECASE, search
 from typing import Awaitable, Callable, Optional
@@ -35,7 +36,7 @@ from PCBot.plugins.replyhandler import (
 plugin = Plugin[GatewayBot, BotData]()
 cell_revealed_chars = [
   '\N{LARGE YELLOW SQUARE}',
-  '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '\💣'
+  '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '\\💣'
 ]
 
 class MinesweeperGridCellState(Enum):
@@ -301,16 +302,18 @@ class MinesweeperGame(TextGuessGame):
       self, user_id: Snowflake, multiguesser: bool, grid_size: int,
       bomb_count: int
     ):
-        super(user_id, multiguesser)
+        super().__init__(user_id, multiguesser)
 
         self.grid = MinesweeperGrid(grid_size, bomb_count)
 
     # TODO: Report already made moves
     def add_guess(self, guess: str) -> GuessOutcome:
         """(Un)Flags or Reveals the guessed cell and reports any issues."""
-        # TODO: Implement
+        if self.message is None:
+            return GuessOutcome.Invalid
+
         regex: str = r'^\s*(f?)\s*([a-x])\s*(\d{1,2})\s*$'
-        guess_matches: Match = search(regex, guess, IGNORECASE)
+        guess_matches: Optional[Match[str]] = search(regex, guess, IGNORECASE)
         if not guess_matches:
             return GuessOutcome.Invalid
         guess_groups: tuple[str, ...] = guess_matches.groups()
@@ -336,6 +339,9 @@ class MinesweeperGame(TextGuessGame):
         return GuessOutcome.Valid
 
     def __str__(self) -> str:
+        if self.message is None:
+            return ''
+
         # line 1
         status = 'You are playing minesweeper.\n'
 
@@ -386,6 +392,10 @@ class MinesweeperGame(TextGuessGame):
             case MinesweeperGameStatus.WON:
                 status += '\n\nYou have won the game!'
 
+        if self.status is not MinesweeperGameStatus.STARTED:
+            remove_game(self.message.id)
+            remove_game(self.message.channel_id)
+
         # Discord trims whitespace only lines and new lines preceeding them
         # but not if they contain markup like italics
         return status + '\n_ _'
@@ -430,7 +440,7 @@ def create_button(
   callback: Callable[
     [menu.Screen, ViewContext, menu.ScreenButton], Awaitable[None],
   ],
-  style = ButtonStyle.PRIMARY,
+  style: InteractiveButtonStylesT = ButtonStyle.PRIMARY,
   disabled = False,
 ) -> menu.ScreenButton:
     button = menu.ScreenButton(label, style=style, disabled=disabled)
@@ -440,7 +450,7 @@ def create_button(
 
 class MinesweeperScreen(menu.Screen):
     created_initial_buttons = False
-    letter: Optional[chr] = None
+    column: Optional[int] = None
     state = MinesweeperScreenStage.OPTION
 
     option: Optional[MinesweeperOption] = None
@@ -463,6 +473,9 @@ class MinesweeperScreen(menu.Screen):
         return menu.ScreenContent(content=str(self.game))
 
     async def reload(self) -> None:
+        if self.menu.message is None:
+            return
+
         game_over = self.game.status is not MinesweeperGameStatus.STARTED
 
         if game_over:
@@ -472,13 +485,14 @@ class MinesweeperScreen(menu.Screen):
         await self.menu.update_message(await self.build_content())
 
         if game_over:
-            games.pop(self.menu.message.id, None)
+            remove_game(self.menu.message.id)
+            remove_game(self.menu.message.channel_id)
             self.menu.stop()
 
     async def show_option_buttons(self) -> None:
         self.menu.clear_items()
-        self.menu.add_item(create_button('(Un)flag', self.flag_pressed))
-        self.menu.add_item(create_button('Reveal', self.reveal_pressed))
+        self.menu.add_item(create_button('(Un)flag', self.flag_pressed))  # pyright: ignore [reportArgumentType]
+        self.menu.add_item(create_button('Reveal', self.reveal_pressed))  # pyright: ignore [reportArgumentType]
         await self.reload()
 
     async def show_input_buttons(self) -> None:
@@ -487,18 +501,20 @@ class MinesweeperScreen(menu.Screen):
 
         for i in range(self.game.grid.size):
             label: str
-            if self.state == MinesweeperScreenStage.LETTER:
-                label = str(chr(ord('A') + i))
-            elif self.state == MinesweeperScreenStage.NUMBER:
-                label = str(i + 1)
-            else:
-                raise Exception(
-                  f'Invalid state {self.state} found while updating buttons'
-                )
-            self.menu.add_item(create_button(f'{label}', self.input_pressed))
+            match self.state:
+                case MinesweeperScreenStage.LETTER:
+                    label = chr(ord('A') + i)
+                case MinesweeperScreenStage.NUMBER:
+                    label = str(i + 1)
+                case _:
+                    raise Exception(
+                      f'Invalid state {self.state} found while updating' +
+                      'buttons'
+                    )
+            self.menu.add_item(create_button(f'{label}', self.input_pressed))  # pyright: ignore [reportArgumentType]
 
         self.menu.add_item(create_button(
-          'Back', self.back_pressed, style=ButtonStyle.DANGER
+          'Back', self.back_pressed, style=ButtonStyle.DANGER  # pyright: ignore [reportArgumentType]
         ))
 
         await self.reload()
@@ -520,38 +536,47 @@ class MinesweeperScreen(menu.Screen):
     async def back_pressed(
       self, ctx: ViewContext, button: menu.ScreenButton
     ) -> None:
-        if self.state == MinesweeperScreenStage.LETTER:
-            self.state = MinesweeperScreenStage.OPTION
-            self.option = None
-            await self.show_option_buttons()
-        elif self.state == MinesweeperScreenStage.NUMBER:
-            self.state = MinesweeperScreenStage.LETTER
-            await self.show_input_buttons()
-        else:
-            raise Exception(
-              f'Back button pressed during state {self.state}'
-            )
+        match self.state:
+            case MinesweeperScreenStage.LETTER:
+                self.state = MinesweeperScreenStage.OPTION
+                self.option = None
+                await self.show_option_buttons()
+            case MinesweeperScreenStage.NUMBER:
+                self.state = MinesweeperScreenStage.LETTER
+                await self.show_input_buttons()
+            case _:
+                raise Exception(
+                  f'Back button pressed during state {self.state}'
+                )
 
     async def input_pressed(
       self, ctx: ViewContext, button: menu.ScreenButton
     ) -> None:
-        if self.state == MinesweeperScreenStage.LETTER:
-            self.state = MinesweeperScreenStage.NUMBER
-            self.letter = ord(button.label[0]) - ord('A')
-            await self.show_input_buttons()
-        elif self.state == MinesweeperScreenStage.NUMBER:
-            number: int = int(button.label) - 1
-            self.game.make_move(
-              number, self.letter, self.option, MinesweeperInputMethod.SCREEN
-            )
-            self.state = MinesweeperScreenStage.OPTION
-            self.option = None
-            self.letter = None
-            await self.show_option_buttons()
-        else:
-            raise Exception(
-              f'Input button pressed during state {self.state}'
-            )
+        if button.label is None:
+            return
+
+        match self.state:
+            case MinesweeperScreenStage.LETTER:
+                self.state = MinesweeperScreenStage.NUMBER
+                self.column = ord(button.label[0]) - ord('A')
+                await self.show_input_buttons()
+            case MinesweeperScreenStage.NUMBER:
+                if self.option is None or self.column is None:
+                    return
+
+                row: int = int(button.label) - 1
+                self.game.make_move(
+                    row, self.column, self.option,
+                    MinesweeperInputMethod.SCREEN
+                )
+                self.state = MinesweeperScreenStage.OPTION
+                self.option = None
+                self.column = None
+                await self.show_option_buttons()
+            case _:
+                raise Exception(
+                  f'Input button pressed during state {self.state}'
+                )
 
 game_screens: dict[MinesweeperGame, MinesweeperScreen] = {}
 
@@ -620,7 +645,10 @@ class MinesweeperCommand:
             screen.game.message = await ctx.respond_with_builder(
               screen_builder, ensure_message=True
             )
+            assert screen.game.message is not None
 
         add_game(screen.game.message.id, screen.game)
 
-        plugin.model.miru.start_view(minesweeper_menu, bind_to=screen.game)
+        plugin.model.miru.start_view(
+          minesweeper_menu, bind_to=screen.game.message
+        )
