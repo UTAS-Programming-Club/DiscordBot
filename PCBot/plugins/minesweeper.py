@@ -346,9 +346,6 @@ class MinesweeperGame(TextGuessGame):
         return GuessOutcome.Valid
 
     def __str__(self) -> str:
-        if self.message is None:
-            return ''
-
         # line 1
         status = 'You are playing minesweeper.\n'
 
@@ -401,7 +398,8 @@ class MinesweeperGame(TextGuessGame):
             case MinesweeperGameStatus.STARTED:
                 pass
 
-        if self.status is not MinesweeperGameStatus.STARTED:
+        if (self.message is not None
+              and self.status is not MinesweeperGameStatus.STARTED):
             remove_game(self.message.id)
             remove_game(self.message.channel_id)
 

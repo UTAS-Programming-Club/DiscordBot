@@ -72,9 +72,6 @@ class HangmanGame(TextGuessGame):
 
     def __str__(self) -> str:
         """Produce a string to describe the current state of the game."""
-        if self.message is None:
-            return ''
-
         mistake_count = len([
           letter for letter in self.guesses if letter not in self.word
         ])
@@ -166,7 +163,8 @@ class HangmanGame(TextGuessGame):
         if mistake_count >= max_mistake_count:
             status += f'        The answer was: {self.word}.'
 
-        if player_won or mistake_count >= max_mistake_count:
+        if (self.message is not None and
+              (player_won or mistake_count >= max_mistake_count)):
             remove_game(self.message.id)
             remove_game(self.message.channel_id)
 

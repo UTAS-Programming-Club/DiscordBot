@@ -129,9 +129,6 @@ class WordManipulationGame(TextGuessGame):
 
     def __str__(self) -> str:
         """Produce a string to describe the current state of the game."""
-        if self.message is None:
-            return ''
-
         # Line 1
         status = 'You are playing word manipulation.\n'
 
@@ -163,7 +160,7 @@ class WordManipulationGame(TextGuessGame):
         for guess in self.guesses:
             status += '\n' + guess + ': ' + self._get_guess_info(guess)
 
-        if self.word == self.guesses[-1]:
+        if self.message is not None and self.word == self.guesses[-1]:
             status += '\n\nYou win!'
             remove_game(self.message.id)
             remove_game(self.message.channel_id)
