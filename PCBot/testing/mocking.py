@@ -15,6 +15,7 @@ from typing import Optional
 message_id = -1
 
 class MockMessage:
+    """A partial console implementation of hikari.messages.Message."""
     id: int
 
     def __init__(self, id: int):
@@ -24,15 +25,45 @@ class MockMessage:
         print(f'*{self.id}: {output}')
 
 
+class MockRestClient:
+    """A partial console implementation of hikari.api.rest.RESTClient."""
+    async def fetch_channel(
+      self,
+      channel: hikari.snowflakes.SnowflakeishOr[hikari.channels.PartialChannel]
+    ) -> None:
+        pass
+
+
+class MockApp: # (hikari.traits.CacheAware):
+    """A partial console implementation of hikari.impl.gateway_bot."""
+    # _cache: hikari.api.cache.Cache
+    rest: MockRestClient
+
+    def __init__(self):
+        # settings = hikari.impl.config.CacheSettings()
+        # self._cache = hikari.impl.cache.CacheImpl(self, settings)
+        self.rest = MockRestClient()
+
+    # @property
+    # def cache(self) -> hikari.api.cache.Cache:
+    #     return self._cache
+
+
 class MockContext:
     """A partial console implementation of crescent.Context."""
 
+    app: MockApp
+    channel_id: hikari.snowflakes.Snowflake
     user: hikari.users.UserImpl
+
+    # Mock specific
     last_message_id: Optional[int] = None
 
     def __init__(self, app: hikari.traits.RESTAware):
         """Create mock context, currently only user is mocked."""
-        self.user = make_user(app, 1, 'testuser1')
+        self.app = MockApp()
+        self.channel_id = hikari.snowflakes.Snowflake(1)
+        self.user = make_user(app, 2, 'testuser1')
 
     async def defer(self, ephemeral: bool = False) -> None:
         return None
@@ -46,6 +77,20 @@ class MockContext:
         else:
             print(' ', end='')
         print(f'{message_id}: {output}')
+        last_message_id = message_id
+        return MockMessage(message_id)
+
+    async def respond_with_builder(self, builder: crescent.context.context.ResponseBuilderT, ensure_message: bool = False) -> MockMessage:
+        global message_id
+        message_id += 1
+        print(f'{message_id}: {builder.content}')
+        print('\nbuttons: ')
+        for row in builder.components:
+            buttons = [
+                component.label for component in row.components
+                if isinstance(component, hikari.impl.special_endpoints.InteractiveButtonBuilder)
+            ]
+            print(', '.join(buttons))
         last_message_id = message_id
         return MockMessage(message_id)
 
