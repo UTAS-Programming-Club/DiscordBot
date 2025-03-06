@@ -136,6 +136,12 @@ if __name__ == '__main__':
     #              }
     # )
 
+    # Test minesweeper command
     # mock_command(crescent_client, 'PCBot.plugins.minesweeper', 0,
+    #              options={}
+    # )
+
+    # Test checkers command
+    # mock_command(crescent_client, 'PCBot.plugins.checkers', 0,
     #              options={}
     # )
