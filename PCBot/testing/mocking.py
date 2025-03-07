@@ -4,6 +4,7 @@ import asyncio
 import crescent
 import hikari
 import inspect
+from colorama import Style
 from PCBot.pluginmanager import get_plugin_info
 from PCBot.testing.hikari.test_users_comparision import make_user
 from typing import Optional
@@ -76,14 +77,14 @@ class MockContext:
             print('#', end='')
         else:
             print(' ', end='')
-        print(f'{message_id}: {output}')
+        print(f'{message_id}: {output}{Style.RESET}')
         last_message_id = message_id
         return MockMessage(message_id)
 
     async def respond_with_builder(self, builder: crescent.context.context.ResponseBuilderT, ensure_message: bool = False) -> MockMessage:
         global message_id
         message_id += 1
-        print(f'{message_id}: {builder.content}')
+        print(f'{message_id}: {builder.content}{Style.RESET_ALL}')
         print('\nbuttons: ')
         for row in builder.components:
             buttons = [

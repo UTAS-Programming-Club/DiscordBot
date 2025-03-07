@@ -4,14 +4,15 @@
 from crescent import command, Context, option, Plugin
 from colorama import Back, Fore
 from crescent.ext import docstrings
-from dataclasses import astuple, dataclass
+from dataclasses import dataclass
 from enum import Enum
 from hikari import (
   ButtonStyle, ChannelType, GatewayBot, Message, GuildThreadChannel, Snowflake,
   TextableGuildChannel
 )
+from logging import getLogger, Logger
 from miru import ViewContext
-from miru.ext import menu
+from miru.ext.menu import Menu, Screen, ScreenButton, ScreenContent
 from miru.internal.types import InteractiveButtonStylesT
 from random import randrange
 from re import Match, IGNORECASE, search
@@ -21,9 +22,10 @@ from PCBot.plugins.replyhandler import (
   add_game, get_interaction_channel, GuessOutcome, remove_game, TextGuessGame
 )
 
+logger: Logger = getLogger(__name__)
 plugin = Plugin[GatewayBot, BotData]()
 
-grid_size: int = 8
+board_size: int = 8
 
 
 class CheckersPlayer(Enum):
@@ -54,16 +56,13 @@ class CheckersInputMethod(Enum):
 
 
 @dataclass(frozen=True)
-class CheckersGridPosition:
+class CheckersBoardPosition:
     row: int
     column: int
 
-    def __iter__(self):
-        return iter(astuple(self))
-
 
 @dataclass
-class CheckersGridCell:
+class CheckersBoardCell:
     token = CheckersTokenType.EMPTY
     player: Optional[CheckersPlayer] = None
 
@@ -80,142 +79,154 @@ class CheckersGridCell:
         )
 
 
-class CheckersGrid:
-    """Class to store information about the checkers grid."""
-    grid: list[list[CheckersGridCell]]
+class CheckersBoard:
+    """Class to store information about the checkers board."""
+    _board: list[list[CheckersBoardCell]]
     _valid_moves: Optional[
-      dict[CheckersGridPosition, set[CheckersGridPosition]]
+      dict[CheckersBoardPosition, set[CheckersBoardPosition]]
     ] = None
 
     def __init__(self):
-        self.grid = [
-          [CheckersGridCell() for _ in range(grid_size)]
-          for _ in range(grid_size)
+        self._board = [
+          [CheckersBoardCell() for _ in range(board_size)]
+          for _ in range(board_size)
         ]
 
         for row in range(3):
-            for column in range(grid_size):
+            for column in range(board_size):
                 if row % 2 == column % 2:
-                    self.grid[grid_size - row - 1][column].token = CheckersTokenType.REGULAR
-                    self.grid[grid_size - row - 1][column].player = CheckersPlayer.PLAYER1
+                    self._board[board_size - row - 1][column].token = CheckersTokenType.REGULAR
+                    self._board[board_size - row - 1][column].player = CheckersPlayer.PLAYER1
                 else:
-                    self.grid[row][column].token = CheckersTokenType.REGULAR
-                    self.grid[row][column].player = CheckersPlayer.PLAYER2
+                    self._board[row][column].token = CheckersTokenType.REGULAR
+                    self._board[row][column].player = CheckersPlayer.PLAYER2
 
-    def __str__(self) -> str:
-        """Convert a grid into a string."""
-        grid_message: str = '```ansi\n'
+    def get_board(
+      self, stage: CheckersScreenStage, token: Optional[CheckersBoardPosition]
+    ) -> str:
+        """Convert a board into a string."""
+        board_message: str = '```ansi\n'
 
-        for row in range(grid_size):
-            grid_message += '\n'
-            for column in range(grid_size):
-                grid_cell: CheckersGridCell = self.grid[row][column]
-                position = CheckersGridPosition(row, column)
+        for row in range(board_size):
+            board_message += '\n'
+            for column in range(board_size):
+                board_cell: CheckersBoardCell = self._board[row][column]
+                position = CheckersBoardPosition(row, column)
 
-                if row % 2 == column % 2:
-                    grid_message += Back.WHITE
-                else:
-                    grid_message += Back.BLACK
-
-                can_move: bool = (
+                highlight_token: bool = (
+                  stage is CheckersScreenStage.TOKEN and
                   self._valid_moves is not None and
                   position in self._valid_moves and
-                  len(self._valid_moves[position])
-                ) > 0
+                  len(self._valid_moves[position]) > 0
+                )
 
-                match grid_cell.player:
+                highlight_cell: bool = (
+                  stage is CheckersScreenStage.TARGET and
+                  self._valid_moves is not None and
+                  token in self._valid_moves and
+                  position in self._valid_moves[token]
+                )
+
+                match board_cell.player:
                     case CheckersPlayer.PLAYER1:
-                        if can_move:
-                            grid_message += Fore.CYAN
+                        if highlight_token:
+                            board_message += Fore.CYAN
                         else:
-                            grid_message += Fore.BLUE
+                            board_message += Fore.BLUE
                     case CheckersPlayer.PLAYER2:
-                        if can_move:
-                            grid_message += Fore.MAGENTA
+                        if highlight_token:
+                            board_message += Fore.MAGENTA
                         else:
-                            grid_message += Fore.RED
+                            board_message += Fore.RED
 
-                match grid_cell.token:
+                if row % 2 == column % 2:
+                    board_message += Back.WHITE
+                elif highlight_cell:
+                    board_message += Back.BLUE # Gray on Discord
+                else:
+                    board_message += Back.BLACK # Firefly dark blue on Discord
+
+                match board_cell.token:
                     case CheckersTokenType.EMPTY:
-                        grid_message += '    '
+                        board_message += '    '
                     case CheckersTokenType.REGULAR:
                         # Figure space, six-per-em space, black large circle, figure space, six-per-em space
-                        grid_message += '  ⬤  '
+                        board_message += '  ⬤  '
                     case CheckersTokenType.KING:
                         #  En quad, thin space, black chess king, en quad, thin space
-                        grid_message += '  ♚  '
+                        board_message += '  ♚  '
 
-        return grid_message + '```'
+        return board_message + '```'
 
     def get_valid_moves(
       self, player: CheckersPlayer, force: bool = False
-    ) -> dict[CheckersGridPosition, set[CheckersGridPosition]]:
+    ) -> dict[CheckersBoardPosition, set[CheckersBoardPosition]]:
         if self._valid_moves is not None and not force:
             return self._valid_moves
 
         self._valid_moves = {}
 
-        for row in range(grid_size):
-            for column in range(grid_size):
-                grid_cell: CheckersGridCell = self.grid[row][column]
-                valid_moves: set[CheckersGridPosition] = set()
+        for row in range(board_size):
+            for column in range(board_size):
+                board_cell: CheckersBoardCell = self._board[row][column]
+                valid_moves: set[CheckersBoardPosition] = set()
 
-                if grid_cell.player is not player:
+                if board_cell.player is not player:
                     continue
 
-                can_move_up:   bool = grid_cell.can_move_up()
-                can_move_down: bool = grid_cell.can_move_down()
+                can_move_up:   bool = board_cell.can_move_up()
+                can_move_down: bool = board_cell.can_move_down()
 
                 # Up and left
                 if can_move_up and row > 0 and column > 0:
-                    next_cell: CheckersGridCell = (
-                        self.grid[row - 1][column - 1]
+                    next_cell: CheckersBoardCell = (
+                        self._board[row - 1][column - 1]
                     )
                     if next_cell.token is CheckersTokenType.EMPTY:
-                        valid_moves.add(CheckersGridPosition(row - 1, column - 1))
+                        valid_moves.add(CheckersBoardPosition(row - 1, column - 1))
                     elif next_cell.player is not player and row > 1 and column > 1:
-                        next_cell = self.grid[row - 2][column - 2]
+                        next_cell = self._board[row - 2][column - 2]
                         if next_cell.token is CheckersTokenType.EMPTY:
-                            valid_moves.add(CheckersGridPosition(row - 2, column - 2))
+                            valid_moves.add(CheckersBoardPosition(row - 2, column - 2))
 
                 # Up and right
-                if can_move_up and row > 0 and column < grid_size - 1:
-                    next_cell: CheckersGridCell = (
-                        self.grid[row - 1][column + 1]
+                if can_move_up and row > 0 and column < board_size - 1:
+                    next_cell: CheckersBoardCell = (
+                        self._board[row - 1][column + 1]
                     )
                     if next_cell.token is CheckersTokenType.EMPTY:
-                        valid_moves.add(CheckersGridPosition(row - 1, column + 1))
-                    elif next_cell.player is not player and row > 1 and column < grid_size - 2:
-                        next_cell = self.grid[row - 2][column + 2]
+                        valid_moves.add(CheckersBoardPosition(row - 1, column + 1))
+                    elif next_cell.player is not player and row > 1 and column < board_size - 2:
+                        next_cell = self._board[row - 2][column + 2]
                         if next_cell.token is CheckersTokenType.EMPTY:
-                            valid_moves.add(CheckersGridPosition(row - 2, column + 2))
+                            valid_moves.add(CheckersBoardPosition(row - 2, column + 2))
 
                 # Down and left
-                if can_move_down and row < grid_size - 1 and column > 0:
-                    next_cell: CheckersGridCell = (
-                        self.grid[row + 1][column - 1]
+                if can_move_down and row < board_size - 1 and column > 0:
+                    next_cell: CheckersBoardCell = (
+                        self._board[row + 1][column - 1]
                     )
                     if next_cell.token is CheckersTokenType.EMPTY:
-                        valid_moves.add(CheckersGridPosition(row + 1, column - 1))
-                    elif next_cell.player is not player and row < grid_size - 2 and column > 1:
-                        next_cell = self.grid[row + 2][column - 2]
+                        valid_moves.add(CheckersBoardPosition(row + 1, column - 1))
+                    elif next_cell.player is not player and row < board_size - 2 and column > 1:
+                        next_cell = self._board[row + 2][column - 2]
                         if next_cell.token is CheckersTokenType.EMPTY:
-                            valid_moves.add(CheckersGridPosition(row + 2, column - 2))
+                            valid_moves.add(CheckersBoardPosition(row + 2, column - 2))
 
                 # Down and right
-                if can_move_down and row < grid_size - 1 and column < grid_size - 1:
-                    next_cell: CheckersGridCell = (
-                        self.grid[row + 1][column + 1]
+                if can_move_down and row < board_size - 1 and column < board_size - 1:
+                    next_cell: CheckersBoardCell = (
+                        self._board[row + 1][column + 1]
                     )
                     if next_cell.token is CheckersTokenType.EMPTY:
-                        valid_moves.add(CheckersGridPosition(row + 1, column + 1))
-                    elif next_cell.player is not player and row < grid_size - 2 and column < grid_size - 2:
-                        next_cell = self.grid[row + 2][column + 2]
+                        valid_moves.add(CheckersBoardPosition(row + 1, column + 1))
+                    elif next_cell.player is not player and row < board_size - 2 and column < board_size - 2:
+                        next_cell = self._board[row + 2][column + 2]
                         if next_cell.token is CheckersTokenType.EMPTY:
-                            valid_moves.add(CheckersGridPosition(row + 2, column + 2))
+                            valid_moves.add(CheckersBoardPosition(row + 2, column + 2))
 
                 if len(valid_moves) > 0:
-                    self._valid_moves[CheckersGridPosition(row, column)] = valid_moves
+                    self._valid_moves[CheckersBoardPosition(row, column)] = valid_moves
 
         return self._valid_moves
 
@@ -224,19 +235,24 @@ class CheckersGame(TextGuessGame):
     message: Optional[Message] = None
     in_thread: bool = False
 
-    grid: CheckersGrid
+    board: CheckersBoard
     status = CheckersGameStatus.STARTED
     player = CheckersPlayer.PLAYER1
 
-    # last_token: Optional[CheckersGridCell] = None
-    # last_target: Optional[CheckersGridCell] = None
-    # last_removed: Optional[CheckersGridCell] = None
+    # These should be in CheckersScreen but they are needed for CheckersBoard.get_board
+    # which is called from __str__ which cannot take parameters
+    stage = CheckersScreenStage.TOKEN
+    token: Optional[CheckersBoardPosition] = None
+
+    # last_token: Optional[CheckersBoardPosition] = None
+    # last_target: Optional[CheckersBoardPosition] = None
+    # last_removed: Optional[CheckersBoardPosition] = None
     last_input_method: Optional[CheckersInputMethod] = None
 
     def __init__(self, user_id: Snowflake, multiguesser: bool):
         super().__init__(user_id, multiguesser)
 
-        self.grid = CheckersGrid()
+        self.board = CheckersBoard()
 
     # TODO: Report already made moves
     def add_guess(self, guess: str) -> GuessOutcome:
@@ -247,7 +263,7 @@ class CheckersGame(TextGuessGame):
         # TODO: Implement
 
         # Cache updated list of valid moves
-        self.game.grid.get_valid_moves(self.player, True)
+        self.game.board.get_valid_moves(self.player, True)
         return GuessOutcome.Invalid
 
     def __str__(self) -> str:
@@ -260,7 +276,7 @@ class CheckersGame(TextGuessGame):
             status += 'sending'
         else:
             status += 'replying with'
-        # status += ' a message like C7 to reveal a square or fB2 to flag instead.\n'
+        status += ' a message like (1, 5), (2, 6) to move a token to a new position.\n'
 
         # if (self.last_column is not None and self.last_row is not None
         #     and self.last_option is not None
@@ -292,9 +308,8 @@ class CheckersGame(TextGuessGame):
         #             case MinesweeperInputMethod.REPLY:
         #                 status += 'reply'
         #         status += '.\n'
-        status += '.\n'
 
-        status += str(self.grid)
+        status += self.board.get_board(self.stage, self.token)
 
         match self.status:
             case CheckersGameStatus.LOST:
@@ -360,37 +375,31 @@ class CheckersGame(TextGuessGame):
 
 def create_button(
   label: str,
-  callback: Callable[
-    [menu.Screen, ViewContext, menu.ScreenButton], Awaitable[None],
-  ],
+  callback: Callable[[Screen, ViewContext, ScreenButton], Awaitable[None]],
   style: InteractiveButtonStylesT = ButtonStyle.PRIMARY,
   disabled: bool = False,
-) -> menu.ScreenButton:
-    button = menu.ScreenButton(label, style=style, disabled=disabled)
+) -> ScreenButton:
+    button = ScreenButton(label, style=style, disabled=disabled)
     # TODO: Fix reportUnknownLambdaType
     button.callback = lambda ctx: callback(ctx, button)  # pyright: ignore [reportCallIssue, reportUnknownLambdaType]
     return button
 
 
-class CheckersScreen(menu.Screen):
+class CheckersScreen(Screen):
     created_initial_buttons = False
-    token: Optional[CheckersGridCell] = None
-    state = CheckersScreenStage.TOKEN
 
     game: CheckersGame
 
-    def __init__(
-      self, menu: menu.Menu, user_id: Snowflake, multiguesser: bool
-    ):
+    def __init__(self, menu: Menu, user_id: Snowflake, multiguesser: bool):
         super().__init__(menu)
         self.game = CheckersGame(user_id, multiguesser)
 
-    async def build_content(self) -> menu.ScreenContent:
+    async def build_content(self) -> ScreenContent:
         if not self.created_initial_buttons:
           self.created_initial_buttons = True
           await self.show_buttons()
 
-        return menu.ScreenContent(content=str(self.game))
+        return ScreenContent(content=str(self.game))
 
     async def reload(self) -> None:
         if self.menu.message is None:
@@ -411,7 +420,7 @@ class CheckersScreen(menu.Screen):
 
     async def show_buttons(self) -> None:
         self.menu.clear_items()
-        match self.state:
+        match self.game.stage:
           case CheckersScreenStage.TOKEN:
               await self.show_token_buttons()
           case CheckersScreenStage.TARGET:
@@ -419,31 +428,44 @@ class CheckersScreen(menu.Screen):
         await self.reload()
 
     async def show_token_buttons(self) -> None:
-        valid_moves: dict[CheckersGridPosition, set[CheckersGridPosition]] = (
-            self.game.grid.get_valid_moves(self.game.player)
+        valid_moves: dict[CheckersBoardPosition, set[CheckersBoardPosition]] = (
+            self.game.board.get_valid_moves(self.game.player)
         )
 
-        token: CheckersPosition
+        token: CheckersBoardPosition
         for token in valid_moves:
             label = f'({token.row + 1}, {token.column + 1})'
 
             self.menu.add_item(create_button(label, self.token_pressed))  # pyright: ignore [reportArgumentType]
 
     async def show_target_buttons(self) -> None:
-        self.menu.add_item(
-          create_button("Test", self.target_pressed)  # pyright: ignore [reportArgumentType]
+        valid_moves: dict[CheckersBoardPosition, set[CheckersBoardPosition]] = (
+            self.game.board.get_valid_moves(self.game.player)
         )
 
+        target: CheckersBoardPosition
+        for target in valid_moves[self.game.token]:
+            label = f'({target.row + 1}, {target.column + 1})'
+
+            self.menu.add_item(create_button(label, self.target_pressed))  # pyright: ignore [reportArgumentType]
+
     async def token_pressed(
-      self, ctx: ViewContext, button: menu.ScreenButton
+      self, ctx: ViewContext, button: ScreenButton
     ) -> None:
-        self.state = CheckersScreenStage.TARGET
+        if button.label is None:
+            return
+
+        row = int(button.label[1]) - 1
+        column = int(button.label[4]) - 1
+        self.game.token = CheckersBoardPosition(row, column)
+        self.game.stage = CheckersScreenStage.TARGET
+        
         await self.show_buttons()
 
     async def target_pressed(
-      self, ctx: ViewContext, button: menu.ScreenButton
+      self, ctx: ViewContext, button: ScreenButton
     ) -> None:
-        self.state = CheckersScreenStage.TOKEN
+        self.game.stage = CheckersScreenStage.TOKEN
         await self.show_buttons()
 
 game_screens: dict[CheckersGame, CheckersScreen] = {}
@@ -464,8 +486,13 @@ class CheckersCommand:
     thread = option(bool, 'Automatically create a thread', default=False)
 
     async def callback(self, ctx: Context) -> None:
-        """Handle checkers command being run by showing grid and buttons."""
-        checkers_menu = menu.Menu()
+        """Handle checkers command being run by showing board and buttons."""
+        logger.info(
+          f'{ctx.user} is starting a game(multiguesser: {self.multiguesser},' +
+          f' thread: {self.thread})'
+        )
+
+        checkers_menu = Menu()
         screen = CheckersScreen(checkers_menu, ctx.user.id, self.multiguesser)
 
         in_correct_thread: bool
