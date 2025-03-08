@@ -17,7 +17,7 @@ from miru.internal.types import InteractiveButtonStylesT
 from random import randrange
 from re import Match, IGNORECASE, search
 from typing import Awaitable, Callable, Optional
-from PCBot.botdata import BotData, get_token_file_path, guild_id_path
+from PCBot.botdata import BotData
 from PCBot.plugins.replyhandler import (
   add_game, get_interaction_channel, GuessOutcome, remove_game, TextGuessGame
 )
@@ -26,10 +26,6 @@ logger: Logger = getLogger(__name__)
 plugin = Plugin[GatewayBot, BotData]()
 
 board_size: int = 8
-
-# Load guild id
-with open(get_token_file_path(guild_id_path)) as file:
-    guild_id = int(file.read().strip())
 
 
 class CheckersPlayer(Enum):
@@ -258,6 +254,7 @@ class CheckersGame(TextGuessGame):
     _last_token: Optional[CheckersBoardPosition] = None
     _last_target: Optional[CheckersBoardPosition] = None
     _last_captured: Optional[CheckersBoardPosition] = None
+    _last_captured_type: Optional[CheckersTokenType] = None
     _last_input_method: Optional[CheckersInputMethod] = None
 
     def __init__(
@@ -277,15 +274,19 @@ class CheckersGame(TextGuessGame):
 
         # TODO: Implement
 
-        # Cache updated list of valid moves
-        self.game.board.get_valid_moves(self.player, True)
         return GuessOutcome.Invalid
 
     def __str__(self) -> str:
+        user_mention = f'<@{self.user_id}>'
+        challengee_mention = f'<@{self.challengee_id}>'
+
         # line 1
-        status = 'You are playing checkers.\n'
+        status = f'{challengee_mention} You have been challenged to Checkers!\n'
 
         # line 2
+        status += f'Blue is {user_mention}, red is {challengee_mention}.\n'
+
+        # line 3
         status += 'Play using either the buttons below or by '
         if self.in_thread:
             status += 'sending'
@@ -293,33 +294,55 @@ class CheckersGame(TextGuessGame):
             status += 'replying with'
         status += ' a message like (1, 5), (2, 6) to move a token to a new position.\n'
 
-        # TODO: Mention self._last_token's position and player
-        # lines 3 and 4(both optional)
+        # line 4
+        status += '\n'
+
+        # line 5
+        status += f'It is currently '
+        match self.player:
+            case CheckersPlayer.PLAYER1:
+                status += user_mention
+            case CheckersPlayer.PLAYER2:
+                status += challengee_mention
+        status += "'s turn.\n"
+
+        # lines 6(optional)
         if (self._last_token is not None and self._last_target is not None
               and self._last_input_method is not None):
+            status += 'The last move by '
+
             # self.make_move moved the cell from token to target so using target position
-            # token_cell: CheckersBoardCell = (
-            #   self.board.board[self._last_target.row][self._last_target.column]
-            # )
-            # make_move is not done yet so above is wrong
-            token_cell: CheckersBoardCell = (
-              self.board.board[self._last_token.row][self._last_token.column]
+            board_token: CheckersBoardCell = (
+              self.board.board[self._last_target.row][self._last_target.column]
             )
-            status += f'\nThe last move by <@{self.user_id}> was to'
+            match board_token.player:
+                case CheckersPlayer.PLAYER1:
+                    status += user_mention
+                case CheckersPlayer.PLAYER2:
+                    status += challengee_mention
 
-            if self._last_captured is not None:
-                status += ' capture the '
+            status += ' was to move a '
 
-                board_captured: CheckersBoardCell = self.board.board[self._last_captured.row][self._last_captured.column]
-                match board_captured.token:
-                    case CheckersTokenType.TOKEN:
+            match board_token.token:
+                case CheckersTokenType.REGULAR:
+                    status += 'token'
+                case CheckersTokenType.KING:
+                    status += 'king'
+
+            status += f' from {self._last_token} to {self._last_target}'
+
+            if self._last_captured is not None and self._last_captured_type:
+                status += ' and capture the '
+
+                match self._last_captured_type:
+                    case CheckersTokenType.REGULAR:
                         status += 'token'
                     case CheckersTokenType.KING:
                         status += 'king'
 
-                status += f' at {self._last_captured} and'
+                status += f' at {self._last_captured}'
 
-            status += f' move {self._last_token} to {self._last_target} via '
+            status += f' via '
 
             match self._last_input_method:
                 case CheckersInputMethod.SCREEN:
@@ -365,12 +388,12 @@ class CheckersGame(TextGuessGame):
         if target_cell.token is not CheckersTokenType.EMPTY:
             return
 
-        # TODO: Remove
-        print(token, token_cell, target, target_cell, input_method)
+        # TODO: Detect capturing
 
         self._last_token = token
         self._last_target = target
         # self._last_captured = ?
+        # self._last_captured_type = ?
         self._last_input_method = input_method
 
     #     match option:
@@ -403,7 +426,20 @@ class CheckersGame(TextGuessGame):
     #         case MinesweeperOption.FAILED_REVEAL_BY_REVEALED:
     #             # TODO: Report failure
     #             pass
-        pass
+
+        target_cell.token = token_cell.token
+        target_cell.player = token_cell.player
+        token_cell.token = CheckersTokenType.EMPTY
+        token_cell.player = None
+
+        match self.player:
+            case CheckersPlayer.PLAYER1:
+                self.player = CheckersPlayer.PLAYER2
+            case CheckersPlayer.PLAYER2:
+                self.player = CheckersPlayer.PLAYER1
+
+        # Cache updated list of valid moves
+        self.board.get_valid_moves(self.player, True)
 
 
 def create_button(
@@ -486,6 +522,10 @@ class CheckersScreen(Screen):
       self, ctx: ViewContext, button: ScreenButton
     ) -> None:
         if button.label is None:
+            return
+        if self.game.player is CheckersPlayer.PLAYER1 and ctx.user.id != self.game.user_id:
+            return
+        if self.game.player is CheckersPlayer.PLAYER2 and ctx.user.id != self.game.challengee_id:
             return
 
         row = int(button.label[1]) - 1
