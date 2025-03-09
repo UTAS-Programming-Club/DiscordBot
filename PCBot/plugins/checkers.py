@@ -114,7 +114,7 @@ class CheckersBoard:
         for row in range(board_size):
             board_message += '\n'
             for column in range(board_size):
-                board_token: CheckersBoardCell = self.board[row][column]
+                cell: CheckersBoardCell = self.board[row][column]
                 position = CheckersBoardPosition(row, column)
 
                 highlight_token: bool = (
@@ -131,7 +131,7 @@ class CheckersBoard:
                   position in self._valid_moves[token]
                 )
 
-                match board_token.player:
+                match cell.player:
                     case CheckersPlayer.PLAYER1:
                         if highlight_token:
                             board_message += Fore.CYAN
@@ -150,7 +150,7 @@ class CheckersBoard:
                 else:
                     board_message += Back.BLACK # Firefly dark blue on Discord
 
-                match board_token.token:
+                match cell.token:
                     case CheckersTokenType.EMPTY:
                         board_message += '    '
                     case CheckersTokenType.REGULAR:
@@ -172,14 +172,14 @@ class CheckersBoard:
 
         for row in range(board_size):
             for column in range(board_size):
-                board_token: CheckersBoardCell = self.board[row][column]
+                cell: CheckersBoardCell = self.board[row][column]
                 valid_moves: set[CheckersBoardPosition] = set()
 
-                if board_token.player is not player:
+                if cell.player is not player:
                     continue
 
-                can_move_up:   bool = board_token.can_move_up()
-                can_move_down: bool = board_token.can_move_down()
+                can_move_up:   bool = cell.can_move_up()
+                can_move_down: bool = cell.can_move_down()
 
                 # Up and left
                 if can_move_up and row > 0 and column > 0:
@@ -312,10 +312,10 @@ class CheckersGame(TextGuessGame):
             status += 'The last move by '
 
             # self.make_move moved the cell from token to target so using target position
-            board_token: CheckersBoardCell = (
+            moved_cell: CheckersBoardCell = (
               self.board.board[self._last_target.row][self._last_target.column]
             )
-            match board_token.player:
+            match moved_cell.player:
                 case CheckersPlayer.PLAYER1:
                     status += user_mention
                 case CheckersPlayer.PLAYER2:
@@ -323,7 +323,7 @@ class CheckersGame(TextGuessGame):
 
             status += ' was to move a '
 
-            match board_token.token:
+            match moved_cell.token:
                 case CheckersTokenType.REGULAR:
                     status += 'token'
                 case CheckersTokenType.KING:
@@ -388,44 +388,23 @@ class CheckersGame(TextGuessGame):
         if target_cell.token is not CheckersTokenType.EMPTY:
             return
 
-        # TODO: Detect capturing
+        # (x + x + n) % 2 = (2x + n) % 2 = (2x % 2 + n % 2) % 2 = (n % 2) % 2 = n % 2
+        capturing: bool = (token.row + target.row) % 2 == 0
 
         self._last_token = token
         self._last_target = target
-        # self._last_captured = ?
-        # self._last_captured_type = ?
         self._last_input_method = input_method
 
-    #     match option:
-    #         case MinesweeperOption.FLAG:
-    #             if self.grid.get_cell_revealed_status(row, column):
-    #                 self.last_option = MinesweeperOption.FAILED_FLAG_BY_REVEALED
-    #                 return
-    #             self.grid.toggle_cell_flagged_status(row, column)
-    #         case MinesweeperOption.REVEAL:
-    #             if self.grid.get_cell_flagged_status(row, column):
-    #                 self.last_option = MinesweeperOption.FAILED_REVEAL_BY_FLAGGED
-    #                 return
-    #             if self.grid.get_cell_revealed_status(row, column):
-    #                 self.last_option = MinesweeperOption.FAILED_REVEAL_BY_REVEALED
-    #                 return
-    # 
-    #             self.grid.reveal_cell(row, column)
-    # 
-    #             if self.grid.get_cell_bomb_status(row, column):
-    #                 self.status = MinesweeperGameStatus.LOST
-    #                 self.grid.reveal_bombs()
-    #             elif self.grid.check_game_won():
-    #                 self.status = MinesweeperGameStatus.WON
-    #         case MinesweeperOption.FAILED_FLAG_BY_REVEALED:
-    #             # TODO: Report failure
-    #             pass
-    #         case MinesweeperOption.FAILED_REVEAL_BY_FLAGGED:
-    #             # TODO: Report failure
-    #             pass
-    #         case MinesweeperOption.FAILED_REVEAL_BY_REVEALED:
-    #             # TODO: Report failure
-    #             pass
+        if capturing:
+            self._last_captured = CheckersBoardPosition(
+              (token.row + target.row) // 2, (token.column + target.column) // 2
+            )
+            captured_cell: CheckersBoardCell = (
+              self.board.board[self._last_captured.row][self._last_captured.column]
+            )
+            self._last_captured_type = captured_cell.token
+            captured_cell.token = CheckersTokenType.EMPTY
+            captured_cell.player = None
 
         target_cell.token = token_cell.token
         target_cell.player = token_cell.player
@@ -539,6 +518,10 @@ class CheckersScreen(Screen):
       self, ctx: ViewContext, button: ScreenButton
     ) -> None:
         if button.label is None:
+            return
+        if self.game.player is CheckersPlayer.PLAYER1 and ctx.user.id != self.game.user_id:
+            return
+        if self.game.player is CheckersPlayer.PLAYER2 and ctx.user.id != self.game.challengee_id:
             return
 
         row = int(button.label[1]) - 1
