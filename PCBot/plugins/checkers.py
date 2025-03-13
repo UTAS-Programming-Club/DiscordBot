@@ -61,7 +61,7 @@ class CheckersBoardPosition:
     column: int
 
     def __str__(self) -> str:
-        return f'({self.row + 1}, {self.column + 1})'
+        return f'({self.column + 1}, {self.row + 1})'
 
 
 @dataclass
@@ -375,9 +375,9 @@ class CheckersGame(TextGuessGame):
       self, token: CheckersBoardPosition, target: CheckersBoardPosition,
       input_method: CheckersInputMethod
     ) -> None:
-        if token.row >= board_size or token.column >= grid_size:
+        if token.row >= board_size or token.column >= board_size:
             return
-        if target.row >= board_size or target.column >= grid_size:
+        if target.row >= board_size or target.column >= board_size:
             return
 
         token_cell: CheckersBoardCell = self.board.board[token.row][token.column]
@@ -413,8 +413,12 @@ class CheckersGame(TextGuessGame):
 
         match self.player:
             case CheckersPlayer.PLAYER1:
+                if target.row == 0:
+                    target_cell.token = CheckersTokenType.KING
                 self.player = CheckersPlayer.PLAYER2
             case CheckersPlayer.PLAYER2:
+                if target.row == board_size - 1:
+                    target_cell.token = CheckersTokenType.KING
                 self.player = CheckersPlayer.PLAYER1
 
         # Cache updated list of valid moves
@@ -497,6 +501,8 @@ class CheckersScreen(Screen):
         for target in valid_moves[self.game.screen_token]:
             self.menu.add_item(create_button(str(target), self.target_pressed))  # pyright: ignore [reportArgumentType]
 
+        self.menu.add_item(create_button("Back", self.back_pressed))
+
     async def token_pressed(
       self, ctx: ViewContext, button: ScreenButton
     ) -> None:
@@ -507,8 +513,8 @@ class CheckersScreen(Screen):
         if self.game.player is CheckersPlayer.PLAYER2 and ctx.user.id != self.game.challengee_id:
             return
 
-        row = int(button.label[1]) - 1
-        column = int(button.label[4]) - 1
+        column = int(button.label[1]) - 1
+        row = int(button.label[4]) - 1
         self.game.screen_token = CheckersBoardPosition(row, column)
         self.game.screen_stage = CheckersScreenStage.TARGET
         
@@ -524,14 +530,21 @@ class CheckersScreen(Screen):
         if self.game.player is CheckersPlayer.PLAYER2 and ctx.user.id != self.game.challengee_id:
             return
 
-        row = int(button.label[1]) - 1
-        column = int(button.label[4]) - 1
+        column = int(button.label[1]) - 1
+        row = int(button.label[4]) - 1
         target = CheckersBoardPosition(row, column)
         self.game.screen_stage = CheckersScreenStage.TOKEN
 
         self.game.make_move(
           self.game.screen_token, target, CheckersInputMethod.SCREEN
         )
+
+        await self.show_buttons()
+
+    async def back_pressed(
+      self, ctx: ViewContext, button: ScreenButton
+    ) -> None:
+        self.game.screen_stage = CheckersScreenStage.TOKEN
 
         await self.show_buttons()
 
