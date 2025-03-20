@@ -87,7 +87,7 @@ class CheckersBoard:
     # TODO: Switch to dict[CheckersBoardPosition, CheckersBoardCell]?
     board: list[list[CheckersBoardCell]]
     _valid_moves: Optional[
-      dict[CheckersBoardPosition, set[CheckersBoardPosition]]
+      dict[CheckersBoardPosition, set[tuple[bool, CheckersBoardPosition]]]
     ] = None
 
     def __init__(self):
@@ -111,6 +111,12 @@ class CheckersBoard:
         """Convert a board into a string."""
         board_message: str = '```ansi\n'
 
+        target_positions: Optional[set[CheckersBoardPosition]] = None
+        if (stage is CheckersScreenStage.TARGET and
+          self._valid_moves is not None and
+          token in self._valid_moves):
+            target_positions = {move[1] for move in self._valid_moves[token]}
+
         for row in range(board_size):
             board_message += '\n'
             for column in range(board_size):
@@ -121,14 +127,13 @@ class CheckersBoard:
                   stage is CheckersScreenStage.TOKEN and
                   self._valid_moves is not None and
                   position in self._valid_moves and
+                  # TODO: Check if this is needed
                   len(self._valid_moves[position]) > 0
                 )
 
                 highlight_cell: bool = (
-                  stage is CheckersScreenStage.TARGET and
-                  self._valid_moves is not None and
-                  token in self._valid_moves and
-                  position in self._valid_moves[token]
+                  target_positions is not None and
+                  position in target_positions
                 )
 
                 match cell.player:
@@ -163,8 +168,9 @@ class CheckersBoard:
         return board_message + '```'
 
     def get_valid_moves(
-      self, player: CheckersPlayer, force: bool = False
-    ) -> dict[CheckersBoardPosition, set[CheckersBoardPosition]]:
+      self, player: CheckersPlayer, repeated_capture: bool = False,
+      force: bool = False
+    ) -> dict[CheckersBoardPosition, set[tuple[bool, CheckersBoardPosition]]]:
         if self._valid_moves is not None and not force:
             return self._valid_moves
 
@@ -187,11 +193,16 @@ class CheckersBoard:
                         self.board[row - 1][column - 1]
                     )
                     if next_cell.token is CheckersTokenType.EMPTY:
-                        valid_moves.add(CheckersBoardPosition(row - 1, column - 1))
+                        if not repeated_capture:
+                            valid_moves.add(
+                              (False, CheckersBoardPosition(row - 1, column - 1))
+                            )
                     elif next_cell.player is not player and row > 1 and column > 1:
                         next_cell = self.board[row - 2][column - 2]
                         if next_cell.token is CheckersTokenType.EMPTY:
-                            valid_moves.add(CheckersBoardPosition(row - 2, column - 2))
+                            valid_moves.add(
+                              (True, CheckersBoardPosition(row - 2, column - 2))
+                            )
 
                 # Up and right
                 if can_move_up and row > 0 and column < board_size - 1:
@@ -199,11 +210,16 @@ class CheckersBoard:
                         self.board[row - 1][column + 1]
                     )
                     if next_cell.token is CheckersTokenType.EMPTY:
-                        valid_moves.add(CheckersBoardPosition(row - 1, column + 1))
+                        if not repeated_capture:
+                            valid_moves.add(
+                              (False, CheckersBoardPosition(row - 1, column + 1))
+                            )
                     elif next_cell.player is not player and row > 1 and column < board_size - 2:
                         next_cell = self.board[row - 2][column + 2]
                         if next_cell.token is CheckersTokenType.EMPTY:
-                            valid_moves.add(CheckersBoardPosition(row - 2, column + 2))
+                            valid_moves.add(
+                              (True, CheckersBoardPosition(row - 2, column + 2))
+                            )
 
                 # Down and left
                 if can_move_down and row < board_size - 1 and column > 0:
@@ -211,11 +227,16 @@ class CheckersBoard:
                         self.board[row + 1][column - 1]
                     )
                     if next_cell.token is CheckersTokenType.EMPTY:
-                        valid_moves.add(CheckersBoardPosition(row + 1, column - 1))
+                        if not repeated_capture:
+                            valid_moves.add(
+                              (False, CheckersBoardPosition(row + 1, column - 1))
+                            )
                     elif next_cell.player is not player and row < board_size - 2 and column > 1:
                         next_cell = self.board[row + 2][column - 2]
                         if next_cell.token is CheckersTokenType.EMPTY:
-                            valid_moves.add(CheckersBoardPosition(row + 2, column - 2))
+                            valid_moves.add(
+                              (True, CheckersBoardPosition(row + 2, column - 2))
+                            )
 
                 # Down and right
                 if can_move_down and row < board_size - 1 and column < board_size - 1:
@@ -223,12 +244,21 @@ class CheckersBoard:
                         self.board[row + 1][column + 1]
                     )
                     if next_cell.token is CheckersTokenType.EMPTY:
-                        valid_moves.add(CheckersBoardPosition(row + 1, column + 1))
+                        if not repeated_capture:
+                            valid_moves.add(
+                              (False, CheckersBoardPosition(row + 1, column + 1))
+                            )
                     elif next_cell.player is not player and row < board_size - 2 and column < board_size - 2:
                         next_cell = self.board[row + 2][column + 2]
                         if next_cell.token is CheckersTokenType.EMPTY:
-                            valid_moves.add(CheckersBoardPosition(row + 2, column + 2))
+                            valid_moves.add(
+                              (True, CheckersBoardPosition(row + 2, column + 2))
+                            )
 
+                # TODO: Is this check wanted?
+                # Does this keep old moves in the case the next player has no valid moves?
+                # This might at least be preventing the error from having no buttons in that case.
+                # Though the buttons end up hiding anyway.
                 if len(valid_moves) > 0:
                     self._valid_moves[CheckersBoardPosition(row, column)] = valid_moves
 
@@ -245,6 +275,7 @@ class CheckersGame(TextGuessGame):
     board: CheckersBoard
     status = CheckersGameStatus.STARTED
     player = CheckersPlayer.PLAYER1
+    repeated_capture: bool = False
 
     # These should be in CheckersScreen but they are needed for CheckersBoard.get_board
     # which is called from __str__ which cannot take parameters
@@ -380,21 +411,26 @@ class CheckersGame(TextGuessGame):
         if target.row >= board_size or target.column >= board_size:
             return
 
+        # Find info on current token location
         token_cell: CheckersBoardCell = self.board.board[token.row][token.column]
         if token_cell.token is CheckersTokenType.EMPTY or token_cell.player is not self.player:
             return
 
+        # Find into on target location
         target_cell: CheckersBoardCell = self.board.board[target.row][target.column]
         if target_cell.token is not CheckersTokenType.EMPTY:
             return
 
-        # (x + x + n) % 2 = (2x + n) % 2 = (2x % 2 + n % 2) % 2 = (n % 2) % 2 = n % 2
-        capturing: bool = (token.row + target.row) % 2 == 0
-
+        # Backup move for printing
         self._last_token = token
         self._last_target = target
         self._last_input_method = input_method
 
+        # Determine if move captures an opposing token
+        # (x + x + n) % 2 = (2x + n) % 2 = (2x % 2 + n % 2) % 2 = (n % 2) % 2 = n % 2
+        capturing: bool = (token.row + target.row) % 2 == 0
+
+        # Remove captured token(if any) and backup token for printing
         if capturing:
             self._last_captured = CheckersBoardPosition(
               (token.row + target.row) // 2, (token.column + target.column) // 2
@@ -405,24 +441,42 @@ class CheckersGame(TextGuessGame):
             self._last_captured_type = captured_cell.token
             captured_cell.token = CheckersTokenType.EMPTY
             captured_cell.player = None
+        else:
+            self._last_captured = None
+            self._last_captured_type = None
 
+        # Move token to target position
         target_cell.token = token_cell.token
         target_cell.player = token_cell.player
         token_cell.token = CheckersTokenType.EMPTY
         token_cell.player = None
 
+        if capturing:
+            valid_moves: dict[CheckersBoardPosition, set[tuple[bool, CheckersBoardPosition]]] = (
+                self.board.get_valid_moves(self.player, True, True)
+            )
+
+            self.repeated_capture = (
+              target in valid_moves and
+              len([move for move in valid_moves[target] if move[0]]) > 0
+            )
+        else:
+            self.repeated_capture = False
+
         match self.player:
             case CheckersPlayer.PLAYER1:
                 if target.row == 0:
                     target_cell.token = CheckersTokenType.KING
-                self.player = CheckersPlayer.PLAYER2
+                if not self.repeated_capture:
+                    self.player = CheckersPlayer.PLAYER2
             case CheckersPlayer.PLAYER2:
                 if target.row == board_size - 1:
                     target_cell.token = CheckersTokenType.KING
-                self.player = CheckersPlayer.PLAYER1
+                if not self.repeated_capture:
+                    self.player = CheckersPlayer.PLAYER1
 
         # Cache updated list of valid moves
-        self.board.get_valid_moves(self.player, True)
+        self.board.get_valid_moves(self.player, self.repeated_capture, True)
 
 
 def create_button(
@@ -484,8 +538,8 @@ class CheckersScreen(Screen):
         await self.reload()
 
     async def show_token_buttons(self) -> None:
-        valid_moves: dict[CheckersBoardPosition, set[CheckersBoardPosition]] = (
-            self.game.board.get_valid_moves(self.game.player)
+        valid_moves: dict[CheckersBoardPosition, set[tuple[bool, CheckersBoardPosition]]] = (
+            self.game.board.get_valid_moves(self.game.player, self.game.repeated_capture)
         )
 
         token: CheckersBoardPosition
@@ -493,12 +547,12 @@ class CheckersScreen(Screen):
             self.menu.add_item(create_button(str(token), self.token_pressed))  # pyright: ignore [reportArgumentType]
 
     async def show_target_buttons(self) -> None:
-        valid_moves: dict[CheckersBoardPosition, set[CheckersBoardPosition]] = (
-            self.game.board.get_valid_moves(self.game.player)
+        valid_moves: dict[CheckersBoardPosition, set[tuple[bool, CheckersBoardPosition]]] = (
+            self.game.board.get_valid_moves(self.game.player, self.game.repeated_capture)
         )
 
         target: CheckersBoardPosition
-        for target in valid_moves[self.game.screen_token]:
+        for _, target in valid_moves[self.game.screen_token]:
             self.menu.add_item(create_button(str(target), self.target_pressed))  # pyright: ignore [reportArgumentType]
 
         self.menu.add_item(create_button("Back", self.back_pressed))
@@ -570,8 +624,8 @@ class CheckersCommand:
     async def callback(self, ctx: Context) -> None:
         """Handle checkers command being run by showing board and buttons."""
         logger.info(
-          f'{ctx.user} is starting a game(multiguesser: {self.multiguesser},' +
-          f' thread: {self.thread})'
+          f'{ctx.user} is starting a game(user: {self.user}, ' +
+          f'multiguesser: {self.multiguesser}, thread: {self.thread})'
         )
 
         checkers_menu = Menu()
