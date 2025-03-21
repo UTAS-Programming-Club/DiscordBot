@@ -288,10 +288,8 @@ class CheckersGame(TextGuessGame):
     _last_captured_type: Optional[CheckersTokenType] = None
     _last_input_method: Optional[CheckersInputMethod] = None
 
-    def __init__(
-      self, user_id: Snowflake, challengee_id: Snowflake, multiguesser: bool
-    ):
-        super().__init__(user_id, multiguesser)
+    def __init__(self, user_id: Snowflake, challengee_id: Snowflake):
+        super().__init__(user_id, False)
 
         self.user_id = user_id
         self.challengee_id = challengee_id
@@ -498,11 +496,10 @@ class CheckersScreen(Screen):
     game: CheckersGame
 
     def __init__(
-      self, menu: Menu, user_id: Snowflake, challengee_id: Snowflake,
-      multiguesser: bool
+      self, menu: Menu, user_id: Snowflake, challengee_id: Snowflake
     ):
         super().__init__(menu)
-        self.game = CheckersGame(user_id, challengee_id, multiguesser)
+        self.game = CheckersGame(user_id, challengee_id)
 
     async def build_content(self) -> ScreenContent:
         if not self.created_initial_buttons:
@@ -618,20 +615,17 @@ class CheckersCommand:
 
     user = option(User, 'User to challenge')
 
-    multiguesser = option(bool, 'Allow anyone to guess', default=False)
     thread = option(bool, 'Automatically create a thread', default=False)
 
     async def callback(self, ctx: Context) -> None:
         """Handle checkers command being run by showing board and buttons."""
         logger.info(
           f'{ctx.user} is starting a game(user: {self.user}, ' +
-          f'multiguesser: {self.multiguesser}, thread: {self.thread})'
+          f'thread: {self.thread})'
         )
 
         checkers_menu = Menu()
-        screen = CheckersScreen(
-          checkers_menu, ctx.user.id, self.user.id, self.multiguesser
-        )
+        screen = CheckersScreen(checkers_menu, ctx.user.id, self.user.id)
 
         in_correct_thread: bool
         channel: Optional[TextableGuildChannel]
