@@ -2,7 +2,7 @@
 # pyright: strict
 
 from crescent import command, Context, option, Plugin
-from colorama import Back, Fore
+from colorama import Back, Fore, Style
 from crescent.ext import docstrings
 from dataclasses import dataclass
 from enum import Enum
@@ -117,8 +117,21 @@ class CheckersBoard:
           token in self._valid_moves):
             target_positions = {move[1] for move in self._valid_moves[token]}
 
+        # Space and six-per-em space
+        # Used for regular chars(letters and space)
+        regular_padding = '  '
+        # En space and hair space
+        # Used with wide chars(circles and kings)
+        wide_padding = '  '
+
+        board_message += Style.RESET_ALL + '[1;2m  '
+        for column in range(board_size):
+            board_message += (
+              regular_padding + chr(ord('A') + column) + regular_padding
+            )
+
         for row in range(board_size):
-            board_message += '\n'
+            board_message += f'\n{Style.RESET_ALL}[1;2m{board_size - row}[22m '
             for column in range(board_size):
                 cell: CheckersBoardCell = self.board[row][column]
                 position = CheckersBoardPosition(row, column)
@@ -155,15 +168,27 @@ class CheckersBoard:
                 else:
                     board_message += Back.BLACK # Firefly dark blue on Discord
 
-                match cell.token:
-                    case CheckersTokenType.EMPTY:
-                        board_message += '    '
-                    case CheckersTokenType.REGULAR:
-                        # Figure space, six-per-em space, black large circle, figure space, six-per-em space
-                        board_message += '  ⬤  '
-                    case CheckersTokenType.KING:
-                        #  En quad, thin space, black chess king, en quad, thin space
-                        board_message += '  ♚  '
+                if cell.token is CheckersTokenType.EMPTY:
+                    board_message += regular_padding + ' ' + regular_padding
+                else:
+                    board_message += wide_padding
+                    if (cell.token is CheckersTokenType.REGULAR and
+                          cell.player is CheckersPlayer.PLAYER1):
+                        # Bold Circled White Bullet
+                        board_message += '[1;2m⦾[22m'
+                    elif (cell.token is CheckersTokenType.KING and
+                          cell.player is CheckersPlayer.PLAYER1):
+                        # White Chess King
+                        board_message += '♔'
+                    elif (cell.token is CheckersTokenType.REGULAR and
+                          cell.player is CheckersPlayer.PLAYER2):
+                        # Bold Circled Bullet
+                        board_message += '[1;2m⦿[22m'
+                    elif (cell.token is CheckersTokenType.KING and
+                          cell.player is CheckersPlayer.PLAYER2):
+                        # Black Chess King
+                        board_message += '♚'
+                    board_message += wide_padding
 
         return board_message + '```'
 
