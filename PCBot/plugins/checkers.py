@@ -117,21 +117,21 @@ class CheckersBoard:
           token in self._valid_moves):
             target_positions = {move[1] for move in self._valid_moves[token]}
 
-        # Space and six-per-em space
+        # Three-per-em space
+        cell_padding = ' '
+        # Thin space
         # Used for regular chars(letters and space)
-        regular_padding = '  '
-        # En space and hair space
-        # Used with wide chars(circles and kings)
-        wide_padding = '  '
+        full_padding: str = cell_padding + ' '
 
         board_message += Style.RESET_ALL + '[1;2m  '
         for column in range(board_size):
-            board_message += (
-              regular_padding + chr(ord('A') + column) + regular_padding
-            )
+            letter: str = chr(ord('A') + column)
+            board_message += full_padding + letter + full_padding
 
         for row in range(board_size):
-            board_message += f'\n{Style.RESET_ALL}[1;2m{board_size - row}[22m '
+            board_message += (
+              f'\n{Style.RESET_ALL}[1;2m{board_size - row}[22m '
+            )
             for column in range(board_size):
                 cell: CheckersBoardCell = self.board[row][column]
                 position = CheckersBoardPosition(row, column)
@@ -169,9 +169,9 @@ class CheckersBoard:
                     board_message += Back.BLACK # Firefly dark blue on Discord
 
                 if cell.token is CheckersTokenType.EMPTY:
-                    board_message += regular_padding + ' ' + regular_padding
+                    board_message += full_padding + ' ' + full_padding
                 else:
-                    board_message += wide_padding
+                    board_message += cell_padding
                     if (cell.token is CheckersTokenType.REGULAR and
                           cell.player is CheckersPlayer.PLAYER1):
                         # Bold Circled White Bullet
@@ -188,7 +188,7 @@ class CheckersBoard:
                           cell.player is CheckersPlayer.PLAYER2):
                         # Black Chess King
                         board_message += '♚'
-                    board_message += wide_padding
+                    board_message += cell_padding
 
         return board_message + '```'
 
