@@ -61,7 +61,9 @@ class CheckersBoardPosition:
     column: int
 
     def __str__(self) -> str:
-        return f'({self.column + 1}, {self.row + 1})'
+        row_number = str(board_size - self.row)
+        column_letter: str = chr(ord('A') + self.column)
+        return f'{column_letter}{row_number}'
 
 
 @dataclass
@@ -140,8 +142,8 @@ class CheckersBoard:
 
         board_message += reset_all + underline + '  '
         for column in range(board_size):
-            letter: str = chr(ord('A') + column)
-            board_message += full_padding + letter + full_padding
+            column_letter: str = chr(ord('A') + column)
+            board_message += full_padding + column_letter + full_padding
 
         for row in range(board_size):
             row_number = str(board_size - row)
@@ -364,7 +366,7 @@ class CheckersGame(TextGuessGame):
             status += 'sending'
         else:
             status += 'replying with'
-        status += ' a message like (1, 5), (2, 6) to move a token to a new position.\n'
+        status += ' a message like C5, D4 to move a token to a new position.\n'
 
         # line 4
         status += '\n'
@@ -619,8 +621,8 @@ class CheckersScreen(Screen):
         if self.game.player is CheckersPlayer.PLAYER2 and ctx.user.id != self.game.challengee_id:
             return
 
-        column = int(button.label[1]) - 1
-        row = int(button.label[4]) - 1
+        column = ord(button.label[0]) - ord('A')
+        row = board_size - int(button.label[1])
         self.game.screen_token = CheckersBoardPosition(row, column)
         self.game.screen_stage = CheckersScreenStage.TARGET
         
@@ -636,8 +638,8 @@ class CheckersScreen(Screen):
         if self.game.player is CheckersPlayer.PLAYER2 and ctx.user.id != self.game.challengee_id:
             return
 
-        column = int(button.label[1]) - 1
-        row = int(button.label[4]) - 1
+        column = ord(button.label[0]) - ord('A')
+        row = board_size - int(button.label[1])
         target = CheckersBoardPosition(row, column)
         self.game.screen_stage = CheckersScreenStage.TOKEN
 
