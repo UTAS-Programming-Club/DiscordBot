@@ -1,9 +1,10 @@
 """This module contains the bot's checkers minigame command."""
 # pyright: strict
 
-from crescent import command, Context, option, Plugin
 from colorama import Back, Fore, Style
+from crescent import command, Context, option, Plugin
 from crescent.ext import docstrings
+from crescent.utils import create_task
 from dataclasses import dataclass
 from enum import Enum
 from hikari import (
@@ -321,8 +322,7 @@ class CheckersGame(TextGuessGame):
 
     # These should be in CheckersScreen but they are needed for CheckersBoard.get_board
     # which is called from __str__ which cannot take parameters
-    screen_stage = CheckersScreenStage.TOKEN
-    screen_token: Optional[CheckersBoardPosition] = None
+    screen: 'CheckersScreen'
 
     _last_token: Optional[CheckersBoardPosition] = None
     _last_target: Optional[CheckersBoardPosition] = None
@@ -331,13 +331,15 @@ class CheckersGame(TextGuessGame):
     _last_input_method: Optional[CheckersInputMethod] = None
 
     def __init__(
-      self, user_id: Snowflake, challengee_id: Snowflake, legacy: bool
+      self, user_id: Snowflake, challengee_id: Snowflake, legacy: bool,
+      screen: 'CheckersScreen'
     ):
         super().__init__(user_id, False)
 
         self.user_id = user_id
         self.challengee_id = challengee_id
         self.legacy = legacy
+        self.screen = screen
         self.board = CheckersBoard()
 
     # TODO: Report already made moves
@@ -352,11 +354,11 @@ class CheckersGame(TextGuessGame):
             return GuessOutcome.Invalid
         guess_groups: tuple[str, ...] = guess_matches.groups()
 
-        token_column: int = ord(guess_groups[0][0]) - ord('A')
+        token_column: int = ord(guess_groups[0][0].upper()) - ord('A')
         token_row: int = board_size - int(guess_groups[0][1])
         token = CheckersBoardPosition(token_row, token_column)
 
-        target_column: int = ord(guess_groups[1][0]) - ord('A')
+        target_column: int = ord(guess_groups[1][0].upper()) - ord('A')
         target_row: int = board_size - int(guess_groups[1][1])
         target = CheckersBoardPosition(target_row, target_column)
         non_capture_target_info: tuple[bool, CheckersBoardPosition] = (
@@ -376,6 +378,8 @@ class CheckersGame(TextGuessGame):
             return GuessOutcome.Invalid
 
         self.make_move(token, target, CheckersInputMethod.REPLY)
+        self.screen.stage = CheckersScreenStage.TOKEN
+        create_task(self.screen.show_buttons())
         return GuessOutcome.Valid
 
     def __str__(self) -> str:
@@ -454,7 +458,7 @@ class CheckersGame(TextGuessGame):
             status += '.\n'
 
         status += self.board.get_board(
-          self.screen_stage, self.screen_token, self.legacy
+          self.screen.stage, self.screen.token, self.legacy
         )
 
         match self.status:
@@ -578,13 +582,15 @@ class CheckersScreen(Screen):
     created_initial_buttons = False
 
     game: CheckersGame
+    stage = CheckersScreenStage.TOKEN
+    token: Optional[CheckersBoardPosition] = None
 
     def __init__(
       self, menu: Menu, user_id: Snowflake, challengee_id: Snowflake,
       legacy: bool
     ):
         super().__init__(menu)
-        self.game = CheckersGame(user_id, challengee_id, legacy)
+        self.game = CheckersGame(user_id, challengee_id, legacy, self)
 
     async def build_content(self) -> ScreenContent:
         if not self.created_initial_buttons:
@@ -612,7 +618,7 @@ class CheckersScreen(Screen):
 
     async def show_buttons(self) -> None:
         self.menu.clear_items()
-        match self.game.screen_stage:
+        match self.stage:
           case CheckersScreenStage.TOKEN:
               await self.show_token_buttons()
           case CheckersScreenStage.TARGET:
@@ -634,7 +640,7 @@ class CheckersScreen(Screen):
         )
 
         target: CheckersBoardPosition
-        for _, target in valid_moves[self.game.screen_token]:
+        for _, target in valid_moves[self.token]:
             self.menu.add_item(create_button(str(target), self.target_pressed))  # pyright: ignore [reportArgumentType]
 
         self.menu.add_item(create_button("Back", self.back_pressed))
@@ -651,8 +657,8 @@ class CheckersScreen(Screen):
 
         column = ord(button.label[0]) - ord('A')
         row = board_size - int(button.label[1])
-        self.game.screen_token = CheckersBoardPosition(row, column)
-        self.game.screen_stage = CheckersScreenStage.TARGET
+        self.token = CheckersBoardPosition(row, column)
+        self.stage = CheckersScreenStage.TARGET
         
         await self.show_buttons()
 
@@ -669,18 +675,16 @@ class CheckersScreen(Screen):
         column = ord(button.label[0]) - ord('A')
         row = board_size - int(button.label[1])
         target = CheckersBoardPosition(row, column)
-        self.game.screen_stage = CheckersScreenStage.TOKEN
+        self.stage = CheckersScreenStage.TOKEN
 
-        self.game.make_move(
-          self.game.screen_token, target, CheckersInputMethod.SCREEN
-        )
+        self.game.make_move(self.token, target, CheckersInputMethod.SCREEN)
 
         await self.show_buttons()
 
     async def back_pressed(
       self, ctx: ViewContext, button: ScreenButton
     ) -> None:
-        self.game.screen_stage = CheckersScreenStage.TOKEN
+        self.stage = CheckersScreenStage.TOKEN
 
         await self.show_buttons()
 

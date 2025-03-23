@@ -357,6 +357,7 @@ class MinesweeperGame(TextGuessGame):
             status += 'replying with'
         status += ' a message like C7 to reveal a square or fB2 to flag instead.\n'
 
+        # lines 3 and 4(both optional)
         if (self.last_column is not None and self.last_row is not None
             and self.last_option is not None
             and self.last_input_method is not None):
