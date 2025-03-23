@@ -346,9 +346,33 @@ class CheckersGame(TextGuessGame):
         if self.message is None:
             return GuessOutcome.Invalid
 
-        # TODO: Implement
+        regex: str = r'^\s*([a-h][1-8])\s*,\s*([a-h][1-8])\s*$'
+        guess_matches: Optional[Match[str]] = search(regex, guess, IGNORECASE)
+        if not guess_matches:
+            return GuessOutcome.Invalid
+        guess_groups: tuple[str, ...] = guess_matches.groups()
 
-        return GuessOutcome.Invalid
+        token_column: int = ord(guess_groups[0][0]) - ord('A')
+        token_row: int = board_size - int(guess_groups[0][1])
+        token = CheckersBoardPosition(token_row, token_column)
+
+        target_column: int = ord(guess_groups[1][0]) - ord('A')
+        target_row: int = board_size - int(guess_groups[1][1])
+        target = CheckersBoardPosition(target_row, target_column)
+        target_info: tuple[bool, CheckersBoardPosition] = (
+          self.repeated_capture, target
+        )
+
+        valid_moves: dict[CheckersBoardPosition, set[tuple[bool, CheckersBoardPosition]]] = (
+          self.board.get_valid_moves(self.player, self.repeated_capture)
+        )
+        if token not in valid_moves or target_info not in valid_moves[token]:
+            return GuessOutcome.Invalid
+
+        valid: bool = self.make_move(token, target, CheckersInputMethod.REPLY)
+        if not valid:
+            return GuessOutcome.Invalid
+        return GuessOutcome.Valid
 
     def __str__(self) -> str:
         user_mention = f'<@{self.user_id}>'
