@@ -40,9 +40,9 @@ class CheckersTokenType(Enum):
 
 
 class CheckersGameStatus(Enum):
-    STARTED = 1
-    LOST    = 2
-    WON     = 3
+    STARTED     = 1
+    PLAYER1_WON = 2
+    PLAYER2_WON = 3
 
 
 class CheckersScreenStage(Enum):
@@ -298,10 +298,6 @@ class CheckersBoard:
                               (True, CheckersBoardPosition(row + 2, column + 2))
                             )
 
-                # TODO: Is this check wanted?
-                # Does this keep old moves in the case the next player has no valid moves?
-                # This might at least be preventing the error from having no buttons in that case.
-                # Though the buttons end up hiding anyway.
                 if len(valid_moves) > 0:
                     self._valid_moves[CheckersBoardPosition(row, column)] = valid_moves
 
@@ -432,10 +428,10 @@ class CheckersGame(TextGuessGame):
         )
 
         match self.status:
-            case CheckersGameStatus.LOST:
-                status += '\n\nYou have lost the game.'
-            case CheckersGameStatus.WON:
-                status += '\n\nYou have won the game!'
+            case CheckersGameStatus.PLAYER1_WON:
+                status += f'\n{user_mention} has won the game!'
+            case CheckersGameStatus.PLAYER2_WON:
+                status += f'\n{challengee_mention} has won the game!'
             case CheckersGameStatus.STARTED:
                 pass
 
@@ -498,6 +494,7 @@ class CheckersGame(TextGuessGame):
         token_cell.token = CheckersTokenType.EMPTY
         token_cell.player = None
 
+        # Check for forced additional captures
         if capturing:
             valid_moves: dict[CheckersBoardPosition, set[tuple[bool, CheckersBoardPosition]]] = (
                 self.board.get_valid_moves(self.player, True, True)
@@ -510,6 +507,7 @@ class CheckersGame(TextGuessGame):
         else:
             self.repeated_capture = False
 
+        # Check for king promotion and switch player if no forced captures
         match self.player:
             case CheckersPlayer.PLAYER1:
                 if target.row == 0:
@@ -522,9 +520,16 @@ class CheckersGame(TextGuessGame):
                 if not self.repeated_capture:
                     self.player = CheckersPlayer.PLAYER1
 
-        # Cache updated list of valid moves
-        self.board.get_valid_moves(self.player, self.repeated_capture, True)
-
+        # End game if no remaining moves
+        valid_moves: dict[CheckersBoardPosition, set[tuple[bool, CheckersBoardPosition]]] = (
+          self.board.get_valid_moves(self.player, self.repeated_capture, True)
+        )
+        if not self.repeated_capture and len(valid_moves) == 0:
+            match self.player:
+                case CheckersPlayer.PLAYER1:
+                    self.status = CheckersGameStatus.PLAYER1_WON
+                case CheckersPlayer.PLAYER2:
+                    self.status = CheckersGameStatus.PLAYER2_WON
 
 def create_button(
   label: str,
