@@ -106,7 +106,8 @@ class CheckersBoard:
                     self.board[row][column].player = CheckersPlayer.PLAYER2
 
     def get_board(
-      self, stage: CheckersScreenStage, token: Optional[CheckersBoardPosition]
+      self, stage: CheckersScreenStage, token: Optional[CheckersBoardPosition],
+      legacy: bool
     ) -> str:
         """Convert a board into a string."""
         board_message: str = '```ansi\n'
@@ -123,15 +124,31 @@ class CheckersBoard:
         # Used for regular chars(letters and space)
         full_padding: str = cell_padding + ' '
 
-        board_message += Style.RESET_ALL + '[1;2m  '
+        underline: str
+        reset_underline: str
+        reset_all: str
+        if legacy:
+            underline = ''
+            reset_underline = ''
+            reset_all = ''
+        else:
+            # ESC[1;2m and ESC[22m, neither are in colorama as it doesn't do style
+            underline = '[1;2m'
+            reset_underline = '[22m'
+            reset_all = Style.RESET_ALL
+
+
+        board_message += reset_all + underline + '  '
         for column in range(board_size):
             letter: str = chr(ord('A') + column)
             board_message += full_padding + letter + full_padding
 
         for row in range(board_size):
-            board_message += (
-              f'\n{Style.RESET_ALL}[1;2m{board_size - row}[22m '
-            )
+            row_number = str(board_size - row)
+            board_message += '\n' + reset_all
+            board_message += underline + row_number + reset_underline
+            board_message += ' '
+
             for column in range(board_size):
                 cell: CheckersBoardCell = self.board[row][column]
                 position = CheckersBoardPosition(row, column)
@@ -149,24 +166,25 @@ class CheckersBoard:
                   position in target_positions
                 )
 
-                match cell.player:
-                    case CheckersPlayer.PLAYER1:
-                        if highlight_token:
-                            board_message += Fore.CYAN
-                        else:
-                            board_message += Fore.BLUE
-                    case CheckersPlayer.PLAYER2:
-                        if highlight_token:
-                            board_message += Fore.MAGENTA
-                        else:
-                            board_message += Fore.RED
+                if not legacy:
+                    match cell.player:
+                        case CheckersPlayer.PLAYER1:
+                            if highlight_token:
+                                board_message += Fore.CYAN
+                            else:
+                                board_message += Fore.BLUE
+                        case CheckersPlayer.PLAYER2:
+                            if highlight_token:
+                                board_message += Fore.MAGENTA
+                            else:
+                                board_message += Fore.RED
 
-                if row % 2 == column % 2:
-                    board_message += Back.WHITE
-                elif highlight_cell:
-                    board_message += Back.BLUE # Gray on Discord
-                else:
-                    board_message += Back.BLACK # Firefly dark blue on Discord
+                    if row % 2 == column % 2:
+                        board_message += Back.WHITE
+                    elif highlight_cell:
+                        board_message += Back.BLUE # Gray on Discord
+                    else:
+                        board_message += Back.BLACK # Firefly dark blue on Discord
 
                 if cell.token is CheckersTokenType.EMPTY:
                     board_message += full_padding + ' ' + full_padding
@@ -175,7 +193,7 @@ class CheckersBoard:
                     if (cell.token is CheckersTokenType.REGULAR and
                           cell.player is CheckersPlayer.PLAYER1):
                         # Bold Circled White Bullet
-                        board_message += '[1;2m⦾[22m'
+                        board_message += underline + '⦾' + reset_underline
                     elif (cell.token is CheckersTokenType.KING and
                           cell.player is CheckersPlayer.PLAYER1):
                         # White Chess King
@@ -183,7 +201,7 @@ class CheckersBoard:
                     elif (cell.token is CheckersTokenType.REGULAR and
                           cell.player is CheckersPlayer.PLAYER2):
                         # Bold Circled Bullet
-                        board_message += '[1;2m⦿[22m'
+                        board_message += underline + '⦿' + reset_underline
                     elif (cell.token is CheckersTokenType.KING and
                           cell.player is CheckersPlayer.PLAYER2):
                         # Black Chess King
@@ -294,6 +312,7 @@ class CheckersGame(TextGuessGame):
     message: Optional[Message] = None
     user_id: Snowflake
     challengee_id: Snowflake
+    legacy: bool
 
     in_thread: bool = False
 
@@ -313,11 +332,14 @@ class CheckersGame(TextGuessGame):
     _last_captured_type: Optional[CheckersTokenType] = None
     _last_input_method: Optional[CheckersInputMethod] = None
 
-    def __init__(self, user_id: Snowflake, challengee_id: Snowflake):
+    def __init__(
+      self, user_id: Snowflake, challengee_id: Snowflake, legacy: bool
+    ):
         super().__init__(user_id, False)
 
         self.user_id = user_id
         self.challengee_id = challengee_id
+        self.legacy = legacy
         self.board = CheckersBoard()
 
     # TODO: Report already made moves
@@ -405,7 +427,9 @@ class CheckersGame(TextGuessGame):
                     status += 'reply'
             status += '.\n'
 
-        status += self.board.get_board(self.screen_stage, self.screen_token)
+        status += self.board.get_board(
+          self.screen_stage, self.screen_token, self.legacy
+        )
 
         match self.status:
             case CheckersGameStatus.LOST:
@@ -521,10 +545,11 @@ class CheckersScreen(Screen):
     game: CheckersGame
 
     def __init__(
-      self, menu: Menu, user_id: Snowflake, challengee_id: Snowflake
+      self, menu: Menu, user_id: Snowflake, challengee_id: Snowflake,
+      legacy: bool
     ):
         super().__init__(menu)
-        self.game = CheckersGame(user_id, challengee_id)
+        self.game = CheckersGame(user_id, challengee_id, legacy)
 
     async def build_content(self) -> ScreenContent:
         if not self.created_initial_buttons:
@@ -639,6 +664,7 @@ class CheckersCommand:
     """
 
     user = option(User, 'User to challenge')
+    legacy = option(bool, 'Support legacy mobile devices', default=False)
 
     thread = option(bool, 'Automatically create a thread', default=False)
 
@@ -646,11 +672,13 @@ class CheckersCommand:
         """Handle checkers command being run by showing board and buttons."""
         logger.info(
           f'{ctx.user} is starting a game(user: {self.user}, ' +
-          f'thread: {self.thread})'
+          f'legacy: {self.legacy}, thread: {self.thread})'
         )
 
         checkers_menu = Menu()
-        screen = CheckersScreen(checkers_menu, ctx.user.id, self.user.id)
+        screen = CheckersScreen(
+          checkers_menu, ctx.user.id, self.user.id, self.legacy
+        )
 
         in_correct_thread: bool
         channel: Optional[TextableGuildChannel]
