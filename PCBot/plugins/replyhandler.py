@@ -172,8 +172,8 @@ async def on_message_create(event: MessageCreateEvent) -> None:
     if outcome is type(outcome).AlreadyMade:
         # TODO: Check if ephemeral replies can even work, switch to a new message?
         await event.message.respond(
-        f'Your guess {message_text} has already been made.',
-        flags=MessageFlag.EPHEMERAL
+            f'Your guess {message_text} has already been made.',
+            flags=MessageFlag.EPHEMERAL
         )
     elif outcome is type(outcome).Invalid:
         return

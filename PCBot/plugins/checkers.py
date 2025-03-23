@@ -359,19 +359,23 @@ class CheckersGame(TextGuessGame):
         target_column: int = ord(guess_groups[1][0]) - ord('A')
         target_row: int = board_size - int(guess_groups[1][1])
         target = CheckersBoardPosition(target_row, target_column)
-        target_info: tuple[bool, CheckersBoardPosition] = (
-          self.repeated_capture, target
+        non_capture_target_info: tuple[bool, CheckersBoardPosition] = (
+          False, target
+        )
+        capture_target_info: tuple[bool, CheckersBoardPosition] = (
+          True, target
         )
 
         valid_moves: dict[CheckersBoardPosition, set[tuple[bool, CheckersBoardPosition]]] = (
           self.board.get_valid_moves(self.player, self.repeated_capture)
         )
-        if token not in valid_moves or target_info not in valid_moves[token]:
+        if token not in valid_moves or (
+          non_capture_target_info not in valid_moves[token] and
+          capture_target_info not in valid_moves[token]
+        ):
             return GuessOutcome.Invalid
 
-        valid: bool = self.make_move(token, target, CheckersInputMethod.REPLY)
-        if not valid:
-            return GuessOutcome.Invalid
+        self.make_move(token, target, CheckersInputMethod.REPLY)
         return GuessOutcome.Valid
 
     def __str__(self) -> str:
