@@ -1,6 +1,10 @@
 """This module contains the bot's checkers minigame command."""
 # pyright: strict
 
+# TODO: cell size still being the same.
+# It's wrong and different on web, desktop, modern mobile, and native mobile.
+# TODO: FIx replyhandler only allowing player 1 to reply.
+
 from colorama import Back, Fore, Style
 from crescent import command, Context, option, Plugin
 from crescent.ext import docstrings
@@ -315,14 +319,13 @@ class CheckersGame(TextGuessGame):
 
     in_thread: bool = False
 
+    screen: 'CheckersScreen'
     board: CheckersBoard
     status = CheckersGameStatus.STARTED
     player = CheckersPlayer.PLAYER1
     repeated_capture: bool = False
-
-    # These should be in CheckersScreen but they are needed for CheckersBoard.get_board
-    # which is called from __str__ which cannot take parameters
-    screen: 'CheckersScreen'
+    user_lost_token_count: int = 0
+    challengee_lost_token_count: int = 0
 
     _last_token: Optional[CheckersBoardPosition] = None
     _last_target: Optional[CheckersBoardPosition] = None
@@ -457,6 +460,21 @@ class CheckersGame(TextGuessGame):
                     status += 'reply'
             status += '.\n'
 
+        # line 7(optional)
+        if self.user_lost_token_count > 0:
+            status += f'{user_mention} has lost {self.user_lost_token_count} '
+            status += 'token(s)'
+        if self.challengee_lost_token_count > 0:
+            if self.user_lost_token_count > 0:
+                status += ', '
+            status += f'{challengee_mention} has lost '
+            status += f'{self.challengee_lost_token_count} token(s)'
+        if (
+          self.user_lost_token_count > 0 or
+          self.challengee_lost_token_count > 0
+        ):
+            status += '.\n'
+
         status += self.board.get_board(
           self.screen.stage, self.screen.token, self.legacy
         )
@@ -474,10 +492,7 @@ class CheckersGame(TextGuessGame):
             remove_game(self.message.id)
             remove_game(self.message.channel_id)
 
-        # TODO: Check if this is needed
-        # Discord trims whitespace only lines and new lines preceeding them
-        # but not if they contain markup like italics
-        return status + '\n_ _'
+        return status
 
     def make_move(
       self, token: CheckersBoardPosition, target: CheckersBoardPosition,
@@ -541,16 +556,20 @@ class CheckersGame(TextGuessGame):
         else:
             self.repeated_capture = False
 
-        # Check for king promotion and switch player if no forced captures
+        # Check for king promotion, count lost tokens and switch player if no forced captures
         match self.player:
             case CheckersPlayer.PLAYER1:
                 if target.row == 0:
                     target_cell.token = CheckersTokenType.KING
+                if capturing:
+                    self.challengee_lost_token_count += 1
                 if not self.repeated_capture:
                     self.player = CheckersPlayer.PLAYER2
             case CheckersPlayer.PLAYER2:
                 if target.row == board_size - 1:
                     target_cell.token = CheckersTokenType.KING
+                if capturing:
+                    self.user_lost_token_count += 1
                 if not self.repeated_capture:
                     self.player = CheckersPlayer.PLAYER1
 
@@ -558,7 +577,7 @@ class CheckersGame(TextGuessGame):
         valid_moves: dict[CheckersBoardPosition, set[tuple[bool, CheckersBoardPosition]]] = (
           self.board.get_valid_moves(self.player, self.repeated_capture, True)
         )
-        if not self.repeated_capture and len(valid_moves) == 0:
+        if len(valid_moves) == 0:
             match self.player:
                 case CheckersPlayer.PLAYER1:
                     self.status = CheckersGameStatus.PLAYER1_WON
