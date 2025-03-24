@@ -3,7 +3,6 @@
 
 # TODO: cell size still being the same.
 # It's wrong and different on web, desktop, modern mobile, and native mobile.
-# TODO: FIx replyhandler only allowing player 1 to reply.
 
 from colorama import Back, Fore, Style
 from crescent import command, Context, option, Plugin
@@ -337,7 +336,7 @@ class CheckersGame(TextGuessGame):
       self, user_id: Snowflake, challengee_id: Snowflake, legacy: bool,
       screen: 'CheckersScreen'
     ):
-        super().__init__(user_id, False)
+        super().__init__(user_id, True)
 
         self.user_id = user_id
         self.challengee_id = challengee_id
@@ -346,10 +345,18 @@ class CheckersGame(TextGuessGame):
         self.board = CheckersBoard()
 
     # TODO: Report already made moves
-    def add_guess(self, guess: str) -> GuessOutcome:
+    def add_guess(self, user_id: Snowflake, guess: str) -> GuessOutcome:
         """(Un)Flags or Reveals the guessed cell and reports any issues."""
         if self.message is None:
             return GuessOutcome.Invalid
+
+        match self.player:
+            case CheckersPlayer.PLAYER1:
+                if user_id != self.user_id:
+                    return GuessOutcome.Invalid
+            case CheckersPlayer.PLAYER2:
+                if user_id != self.challengee_id:
+                    return GuessOutcome.Invalid
 
         regex: str = r'^\s*([a-h][1-8])\s*,\s*([a-h][1-8])\s*$'
         guess_matches: Optional[Match[str]] = search(regex, guess, IGNORECASE)

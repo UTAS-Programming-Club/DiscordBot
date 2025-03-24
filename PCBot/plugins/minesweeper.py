@@ -13,6 +13,7 @@
 # TODO: Add any todos from both old versions of minesweeper
 # TODO: Report bomb count - flag count
 # TODO: Flag all bombs on a win
+# TODO: Reset buttons on reply? See create_task usage in checkers
 # Also see todos later in the file
 
 from crescent import command, Context, option, Plugin
@@ -314,7 +315,7 @@ class MinesweeperGame(TextGuessGame):
         self.grid = MinesweeperGrid(grid_size, bomb_count)
 
     # TODO: Report already made moves
-    def add_guess(self, guess: str) -> GuessOutcome:
+    def add_guess(self, user_id: Snowflake, guess: str) -> GuessOutcome:
         """(Un)Flags or Reveals the guessed cell and reports any issues."""
         if self.message is None:
             return GuessOutcome.Invalid

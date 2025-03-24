@@ -90,7 +90,7 @@ class WordManipulationGame(TextGuessGame):
                 text = text.replace(char, "?")
         return text
 
-    def add_guess(self, guess: str) -> GuessOutcome:
+    def add_guess(self, user_id: Snowflake, guess: str) -> GuessOutcome:
         if self.message is None:
             return GuessOutcome.Invalid
 
