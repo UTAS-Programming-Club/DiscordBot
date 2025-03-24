@@ -6,14 +6,16 @@ import hikari
 import inspect
 from colorama import Style
 from PCBot.pluginmanager import get_plugin_info
-from PCBot.testing.hikari.test_users_comparision import make_user
+from PCBot.testing.hikari.test_users_comparision import (
+  make_interactions_member, make_user
+)
 from typing import Optional
 
 # TODO: Support more crescent features
 # TODO: Add error checking for invalid plugin or command_index
 # TODO: Check types of other builtins before using setattr
 
-message_id = -1
+last_id = 0
 
 class MockMessage:
     """A partial console implementation of hikari.messages.Message."""
@@ -62,29 +64,31 @@ class MockContext:
 
     def __init__(self, app: hikari.traits.RESTAware):
         """Create mock context, currently only user is mocked."""
+        global last_id
         self.app = MockApp()
-        self.channel_id = hikari.snowflakes.Snowflake(1)
-        self.user = make_user(app, 2, 'testuser1')
+        self.channel_id = hikari.snowflakes.Snowflake(last_id + 1)
+        self.user = make_user(app, last_id + 2, 'testuser1')
+        last_id += 2
 
     async def defer(self, ephemeral: bool = False) -> None:
         return None
 
     async def respond(self, output: str, ephemeral: bool = False, ensure_message: bool = False) -> MockMessage:
         """Mock crescent.Context.respond with console."""
-        global message_id
-        message_id += 1
+        global last_id
+        last_id += 1
         if ephemeral:
             print('#', end='')
         else:
             print(' ', end='')
-        print(f'{message_id}: {output}{Style.RESET}')
-        last_message_id = message_id
-        return MockMessage(message_id)
+        print(f'{last_id}: {output}{Style.RESET}')
+        last_message_id = last_id
+        return MockMessage(last_id)
 
     async def respond_with_builder(self, builder: crescent.context.context.ResponseBuilderT, ensure_message: bool = False) -> MockMessage:
-        global message_id
-        message_id += 1
-        print(f'{message_id}: {builder.content}{Style.RESET_ALL}')
+        global last_id
+        last_id += 1
+        print(f'{last_id}: {builder.content}{Style.RESET_ALL}')
         print('\nbuttons: ')
         for row in builder.components:
             buttons = [
@@ -92,8 +96,8 @@ class MockContext:
                 if isinstance(component, hikari.impl.special_endpoints.InteractiveButtonBuilder)
             ]
             print(', '.join(buttons))
-        last_message_id = message_id
-        return MockMessage(message_id)
+        last_message_id = last_id
+        return MockMessage(last_id)
 
     async def edit(self, output: str) -> None:
         """Mock crescent.Context.edit with console."""
@@ -153,3 +157,10 @@ def mock_command(crescent_client: crescent.Client, plugin: str,
 
     print('\nRunning command:')
     asyncio.run(mocked_class.callback(mock_context))
+
+def make_guild_member(
+  app: hikari.traits.RESTAware, username: str
+) -> hikari.interactions.base_interactions.InteractionMember:
+  global last_id
+  last_id += 1
+  return make_interactions_member(app, last_id - 1, username)

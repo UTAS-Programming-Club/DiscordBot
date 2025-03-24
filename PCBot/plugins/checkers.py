@@ -358,7 +358,7 @@ class CheckersGame(TextGuessGame):
                 if user_id != self.challengee_id:
                     return GuessOutcome.Invalid
 
-        regex: str = r'^\s*([a-h][1-8])\s*,\s*([a-h][1-8])\s*$'
+        regex: str = r'^\s*([a-h][1-8])\s*[,\s]\s*([a-h][1-8])\s*$'
         guess_matches: Optional[Match[str]] = search(regex, guess, IGNORECASE)
         if not guess_matches:
             return GuessOutcome.Invalid

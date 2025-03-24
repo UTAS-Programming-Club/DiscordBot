@@ -11,7 +11,7 @@ from PCBot.botdata import (
     guild_id_path, get_token_file_path, ongaku_available
 )
 from PCBot.pluginmanager import reload_plugins
-# from PCBot.testing.mocking import mock_command
+# from PCBot.testing.mocking import make_guild_member, mock_command
 # from PCBot.testing.hikari.test_users_comparision import (
 #   make_interactions_member
 # )
@@ -143,5 +143,8 @@ if __name__ == '__main__':
 
     # Test checkers command
     # mock_command(crescent_client, 'PCBot.plugins.checkers', 0,
-    #              options={}
+    #              options={
+    #                 'legacy': True,
+    #                 'user': make_guild_member(crescent_client.app, 'testuser2')
+    #              }
     # )
