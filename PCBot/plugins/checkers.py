@@ -18,7 +18,6 @@ from logging import getLogger, Logger
 from miru import ViewContext
 from miru.ext.menu import Menu, Screen, ScreenButton, ScreenContent
 from miru.internal.types import InteractiveButtonStylesT
-from random import randrange
 from re import Match, IGNORECASE, search
 from typing import Awaitable, Callable, Optional
 from PCBot.botdata import BotData
@@ -184,6 +183,8 @@ class CheckersBoard:
                                 board_message += Fore.MAGENTA
                             else:
                                 board_message += Fore.RED
+                        case None:
+                            pass
 
                     if row % 2 == column % 2:
                         board_message += Back.WHITE
@@ -228,7 +229,7 @@ class CheckersBoard:
         for row in range(board_size):
             for column in range(board_size):
                 cell: CheckersBoardCell = self.board[row][column]
-                valid_moves: set[CheckersBoardPosition] = set()
+                valid_moves: set[tuple[bool, CheckersBoardPosition]] = set()
 
                 if cell.player is not player:
                     continue
@@ -431,6 +432,8 @@ class CheckersGame(TextGuessGame):
             moved_cell: CheckersBoardCell = (
               self.board.board[self._last_target.row][self._last_target.column]
             )
+
+            assert moved_cell.player is not None
             match moved_cell.player:
                 case CheckersPlayer.PLAYER1:
                     status += user_mention
@@ -439,6 +442,7 @@ class CheckersGame(TextGuessGame):
 
             status += ' was to move a '
 
+            assert moved_cell.token is not CheckersTokenType.EMPTY
             match moved_cell.token:
                 case CheckersTokenType.REGULAR:
                     status += 'token'
@@ -450,6 +454,7 @@ class CheckersGame(TextGuessGame):
             if self._last_captured is not None and self._last_captured_type:
                 status += ' and capture the '
 
+                assert self._last_captured_type is not CheckersTokenType.EMPTY
                 match self._last_captured_type:
                     case CheckersTokenType.REGULAR:
                         status += 'token'
@@ -665,11 +670,12 @@ class CheckersScreen(Screen):
             self.game.board.get_valid_moves(self.game.player, self.game.repeated_capture)
         )
 
+        assert self.token is not None
         target: CheckersBoardPosition
         for _, target in valid_moves[self.token]:
             self.menu.add_item(create_button(str(target), self.target_pressed))  # pyright: ignore [reportArgumentType]
 
-        self.menu.add_item(create_button("Back", self.back_pressed))
+        self.menu.add_item(create_button("Back", self.back_pressed))  # pyright: ignore [reportArgumentType]
 
     async def token_pressed(
       self, ctx: ViewContext, button: ScreenButton
@@ -703,6 +709,7 @@ class CheckersScreen(Screen):
         target = CheckersBoardPosition(row, column)
         self.stage = CheckersScreenStage.TOKEN
 
+        assert self.token is not None
         self.game.make_move(self.token, target, CheckersInputMethod.SCREEN)
 
         await self.show_buttons()
