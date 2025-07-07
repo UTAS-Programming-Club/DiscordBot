@@ -1,4 +1,5 @@
 """This module contains the bot's mastermind minigame command."""
+# pyright: strict
 
 # TODO: Add difficulties?:
 #      Give number of correct digits in correct places
@@ -7,18 +8,17 @@
 #      List correct digits in correct places(intentially unclear if multiple) and correct digits in incorrect places
 #      ...
 
-from crescent import command, Context, event, option, Plugin
+from crescent import command, Context, option, Plugin
 from crescent.ext import docstrings
-from hikari import (
-  ChannelType, GatewayBot, GuildThreadChannel, Message, MessageCreateEvent,
-  MessageFlag, PartialMessage
-)
-from hikari.snowflakes import Snowflake
-from logging import getLogger
+from hikari import GatewayBot, Message, Snowflake
+from logging import getLogger, Logger
 from random import randrange
 from typing import Optional
+from PCBot.plugins.replyhandler import (
+  GuessOutcome, remove_game, send_text_message, TextGuessGame
+)
 
-logger = getLogger(__name__)
+logger: Logger = getLogger(__name__)
 plugin = Plugin[GatewayBot, None]()
 
 # TODO: Make these command parameters
@@ -26,35 +26,40 @@ digit_count: int = 4
 higher_or_lower = False
 
 
-class MastermindGame:
+class MastermindGame(TextGuessGame):
     """Maintain and allow guesses for a mastermind game."""
 
-    user_id: Snowflake
-    thread_id: Optional[Snowflake] = None
     message: Optional[Message] = None
+    in_thread: bool = False
 
     number: str
     guesses: list[str]
-    multiguesser: bool
 
     def __init__(self, user_id: Snowflake, multiguesser: bool):
         """Start a mastermind game by randomly choosing a number."""
-        self.user_id = user_id
+        super().__init__(user_id, multiguesser)
         self.guesses = []
-        self.multiguesser = multiguesser
 
         self.number = str(
           randrange(10 ** (digit_count - 1), 10 ** digit_count)
         )
         logger.info('Starting game with ' + str(self.number))
 
-    def add_guess(self, guess: str) -> bool:
-        """Add a guess if it was not already made, reports whether it was added."""
-        if guess not in self.guesses:
-            self.guesses.append(guess)
-            return True
+    def add_guess(self, guess: str) -> GuessOutcome:
+        """Add a guess if it was not already made and reports any issues."""
+        if self.message is None:
+                return GuessOutcome.Invalid
 
-        return False
+        processed_guess: str = guess.strip()
+
+        if not processed_guess.isdecimal():
+            return GuessOutcome.Invalid
+
+        if processed_guess in self.guesses:
+            return GuessOutcome.AlreadyMade
+
+        self.guesses.append(processed_guess)
+        return GuessOutcome.Valid
 
     def _get_guess_info_mastermind(self, guess: str) -> str:
         guess_value = int(guess)
@@ -98,7 +103,7 @@ class MastermindGame:
 
         if incorrect_spot_digit_count != 0:
             info += (' and ' + str(incorrect_spot_digit_count) +
-              ' correct but incorrectly positioned digit')
+                     ' correct but incorrectly positioned digit')
 
             if incorrect_spot_digit_count != 1:
                 info += 's'
@@ -129,11 +134,12 @@ class MastermindGame:
         )
 
         # Line 3
-        if self.thread_id and self.thread_id in games:
-            status += 'Play by sending a message with a number guess.'
+        status += 'Play by '
+        if self.in_thread:
+            status += 'sending a'
         else:
-            status += 'Play by replying to this message with a number guess.'
-        status += '\n'
+            status += 'replying to this'
+        status += ' message with a number guess.\n'
 
         if len(self.guesses) == 0:
             return status
@@ -147,53 +153,12 @@ class MastermindGame:
         for guess in self.guesses:
             status += '\n' + guess + ': ' + self._get_guess_info(guess)
 
-        if self.number == self.guesses[-1]:
+        if self.message is not None and self.number == self.guesses[-1]:
             status += '\n\nYou win!'
-            games.pop(self.message.id, None)
-            games.pop(self.message.channel_id, None)
+            remove_game(self.message.id)
+            remove_game(self.message.channel_id)
 
         return status + '```'
-
-
-games: dict[Snowflake, MastermindGame] = {}
-
-
-@plugin.include
-@event
-async def on_message_create(event: MessageCreateEvent):
-    """Handle replies to mastermind messages containing guesses."""
-    game_message: PartialMessage
-    if event.message.referenced_message is not None:
-        game_message = event.message.referenced_message
-    elif event.channel_id in games:
-        game_message = games[event.channel_id].message
-    else:
-        return
-
-    if not game_message or game_message.id not in games:
-        return
-    game_info: MastermindGame = games[game_message.id]
-
-    if (not game_info.multiguesser
-          and event.message.author.id != game_info.user_id):
-        return
-
-    if event.message.content is None:
-        return
-    message_text: str = event.message.content.strip()
-
-    if not message_text.isdecimal():
-        return
-
-    # TODO: Check if ephmeral replies can even work, switch to a new message?
-    if not game_info.add_guess(message_text):
-        await event.message.respond(
-            f'Your guess {message_text} has already been made.',
-            flags=MessageFlag.EPHEMERAL
-        )
-
-    await game_message.edit(str(game_info))
-    await event.message.delete()
 
 
 @plugin.include
@@ -203,50 +168,14 @@ class MastermindCommand:
     """
     Play a game of Mastermind.
 
-    Requested by Cam(camtas) & something sensible(somethingsensible).
-    Implemented by something sensible(somethingsensible).
+    Requested by Cam(camtas) & Joshua(somethingsensible).
+    Implemented by Joshua(somethingsensible).
     """
 
-    multiguesser = option(
-      bool, 'Allow anyone to guess', default=False
-    )
-
-    thread = option(
-      bool, 'Automatically create a thread', default=False
-    )
+    multiguesser = option(bool, 'Allow anyone to guess', default=False)
+    thread = option(bool, 'Automatically create a thread', default=False)
 
     async def callback(self, ctx: Context) -> None:
         """Handle mastermind command being run by starting the minigame."""
         game = MastermindGame(ctx.user.id, self.multiguesser)
-
-        thread: Optional[GuildThreadChannel] = (
-          ctx.app.cache.get_thread(ctx.channel_id)
-        )
-        if thread is None:
-            thread = await ctx.app.rest.fetch_channel(ctx.channel_id)
-        in_thread: bool = (
-          thread is not None and thread.type is ChannelType.GUILD_PUBLIC_THREAD
-          and thread.name == 'Mastermind'
-        )
-
-        if not in_thread and self.thread:
-            # TODO: Avoid this message
-            await ctx.respond(
-              'Starting mastermind game in thread!', ephemeral=True
-            )
-
-            thread = await ctx.app.rest.create_thread(
-              ctx.channel_id, ChannelType.GUILD_PUBLIC_THREAD, 'Mastermind'
-            )
-            games[thread.id] = game
-            game.thread_id = thread.id
-
-            game.message = await thread.send(str(game))
-        else:
-            if in_thread:
-                games[thread.id] = game
-                game.thread_id = thread.id
-
-            game.message = await ctx.respond(str(game), ensure_message=True)
-
-        games[game.message.id] = game
+        await send_text_message(ctx, self.thread, 'Mastermind', game)
