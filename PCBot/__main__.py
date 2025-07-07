@@ -11,7 +11,7 @@ from PCBot.botdata import (
     guild_id_path, get_token_file_path, ongaku_available
 )
 from PCBot.pluginmanager import reload_plugins
-# from PCBot.testing.mocking import mock_command
+# from PCBot.testing.mocking import make_guild_member, mock_command
 # from PCBot.testing.hikari.test_users_comparision import (
 #   make_interactions_member
 # )
@@ -86,6 +86,9 @@ if __name__ == '__main__':
     #    'public': help_public, 'command': 'rpschallenge'
     # })
 
+    # TODO: Fix
+    # KeyError: Unique(name='minesweeper', type=<CommandType.SLASH: 1>, guild_id=810048533603680307, group=None, sub_group=None)
+    # Exception: Edit called without first calling respond
     # Test reload command
     # Cannot reregister as crescent.internal.registry.register_commands does
     # not work without the bot running
@@ -94,6 +97,8 @@ if __name__ == '__main__':
     #     'list_plugins': reload_list_plugins, 'reregister': False
     # })
 
+    # TODO: Fix
+    # TypeError: MockContext.respond() got an unexpected keyword argument 'components'
     # Test rpschallenge
     # Only gets as far as reponding with components as MockContext does not
     # (yet?) support components
@@ -111,4 +116,35 @@ if __name__ == '__main__':
     # Test text adventure command
     # mock_command(crescent_client, 'PCBot.plugins.textadventure', 0,
     #              options={}
+    # )
+
+    # Test hangman command
+    # mock_command(crescent_client, 'PCBot.plugins.hangman', 0,
+    #              options={}
+    # )
+
+    # Test mastermind command
+    # mock_command(crescent_client, 'PCBot.plugins.mastermind', 0,
+    #              options={}
+    # )
+
+    # Test wordmanipulation command
+    # minigame = 'Unscramble'
+    # mock_command(crescent_client, 'PCBot.plugins.wordmanipulation', 0,
+    #              options={
+    #                 'minigame': minigame
+    #              }
+    # )
+
+    # Test minesweeper command
+    # mock_command(crescent_client, 'PCBot.plugins.minesweeper', 0,
+    #              options={}
+    # )
+
+    # Test checkers command
+    # mock_command(crescent_client, 'PCBot.plugins.checkers', 0,
+    #              options={
+    #                 'legacy': True,
+    #                 'user': make_guild_member(crescent_client.app, 'testuser2')
+    #              }
     # )

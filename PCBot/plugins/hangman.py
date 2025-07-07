@@ -55,7 +55,7 @@ class HangmanGame(TextGuessGame):
         self.word = self.word.strip()
         logger.info('Starting game with ' + str(self.word))
 
-    def add_guess(self, guess: str) -> GuessOutcome:
+    def add_guess(self, user_id: Snowflake, guess: str) -> GuessOutcome:
         """Add a guess if it was not already made and reports any issues."""
         if self.message is None or len(guess) != 1:
             return GuessOutcome.Invalid

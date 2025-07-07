@@ -38,7 +38,7 @@ class TextGuessGame(ABC):
         self.multiguesser = multiguesser
 
     @abstractmethod
-    def add_guess(self, guess: str) -> GuessOutcome:
+    def add_guess(self, user_id: Snowflake, guess: str) -> GuessOutcome:
         """Add a guess if it was not already made and reports any issues."""
         pass
 
@@ -165,18 +165,20 @@ async def on_message_create(event: MessageCreateEvent) -> None:
         return
     message_text: str = event.message.content
 
-    outcome: GuessOutcome = game_info.add_guess(message_text)
-    match outcome:
-        case GuessOutcome.AlreadyMade:
-            # TODO: Check if ephemeral replies can even work, switch to a new message?
-            await event.message.respond(
-              f'Your guess {message_text} has already been made.',
-              flags=MessageFlag.EPHEMERAL
-            )
-        case GuessOutcome.Invalid:
-            return
-        case GuessOutcome.Valid:
-            pass
+    outcome: GuessOutcome = game_info.add_guess(
+      event.message.author.id, message_text
+    )
+    # Using type(outcome) to get around reloading causing type ids to not match
+    # TODO: Find a proper fix, I thought reloading this file and then plugins
+    # would ensure they used the newest type but they appear to be one behind
+    if outcome is type(outcome).AlreadyMade:
+        # TODO: Check if ephemeral replies can even work, switch to a new message?
+        await event.message.respond(
+          f'Your guess {message_text} has already been made.',
+          flags=MessageFlag.EPHEMERAL
+        )
+    elif outcome is type(outcome).Invalid:
+        return
 
     await game_message.edit(str(game_info))
     await event.message.delete()
