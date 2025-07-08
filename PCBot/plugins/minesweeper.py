@@ -5,7 +5,6 @@
 # below the length limit. I tried copying the message and reposting it and hit
 # the same issue so it is not bot specific.
 # TODO: Add messages that check for and prevent exceptions from occurring
-# TODO: Ensure bomb count is capped at grid size * grid_size - 1
 # TODO: Switch from bomb to boom char?
 # TODO: Add custom emoji to the bot that is the flag one on top of the green square one
 # TODO: Report expiry
@@ -613,11 +612,11 @@ class MinesweeperCommand:
     """
 
     grid_size = option(
-        int, 'Size of minesweeper grid', min_value=3, default=9, max_value=13
+      int, 'Size of minesweeper grid', min_value=4, default=9, max_value=13
     )
     bomb_count = option(
-        int, 'Number of bombs in the grid', min_value=1, default=5,
-        max_value=80
+      int, 'Number of bombs in the grid', min_value=1, default=5,
+      max_value=80
     )
 
     multiguesser = option(bool, 'Allow anyone to guess', default=False)
@@ -625,6 +624,15 @@ class MinesweeperCommand:
 
     async def callback(self, ctx: Context) -> None:
         """Handle minesweeper command being run by showing grid and buttons."""
+        # Avoid infinite loop from trying to place bombs in starting cell or any nearby ones
+        max_bomb_count: int = self.grid_size * self.grid_size - 9
+        if self.bomb_count >= max_bomb_count:
+            await ctx.respond(
+              f'Max bomb count for a {self.grid_size}x{self.grid_size} grid is'
+              + f' {max_bomb_count}.', ephemeral=True
+            )
+            return
+
         minesweeper_menu = menu.Menu()
         screen = MinesweeperScreen(
           minesweeper_menu, ctx.user.id, self.multiguesser, self.grid_size,
