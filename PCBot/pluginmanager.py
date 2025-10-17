@@ -3,6 +3,7 @@
 
 from collections import Counter
 from crescent import Plugin, PluginManager
+from crescent.events import EventMeta
 from crescent.internal import AppCommandMeta, Includable
 from hikari import GatewayBot
 from importlib import import_module, reload
@@ -39,14 +40,20 @@ def get_plugin_info(plugin_manager: PluginManager)\
     """Provide a list of loaded plugins along with their commands."""
     loaded_commands: dict[str, tuple[AppCommandMeta, ...]] = {}
     plugin_name: str
-    plugin: Plugin[GatewayBot, Any]
+    # TODO: Fix reportUnusedVariable
+    plugin: Plugin[GatewayBot, Any]  # pyright: ignore [reportUnusedVariable]
     for plugin_name, plugin in plugin_manager.plugins.items():
         # TODO: Fix reportUnusedVariable
         child: Includable[Any]  # pyright: ignore [reportUnusedVariable]
-        loaded_commands[plugin_name] = tuple([
-            child.metadata for child in plugin._children  # pyright: ignore [reportPrivateUsage]
-            if isinstance(child.metadata, AppCommandMeta)
-        ])
+        plugin_loaded_commands: list[AppCommandMeta] = []
+        for child in plugin._children:  # pyright: ignore [reportPrivateUsage]
+            if isinstance(child.metadata, AppCommandMeta):
+                plugin_loaded_commands.append(child.metadata)
+            elif isinstance(child.metadata, EventMeta):
+                continue
+            else:
+                print(f'Found unknown metadata: {child.metadata} in {plugin_name}')
+        loaded_commands[plugin_name] = tuple(plugin_loaded_commands)
     return loaded_commands
 
 
@@ -67,14 +74,21 @@ def get_plugin_info(plugin_manager: PluginManager)\
 def get_command_choices(plugin_manager: PluginManager)\
   -> list[tuple[str, str]]:
     """Provide a listed of loaded commands as crescent autocomplete tuples."""
+    command_choices: list[tuple[str, str]] = []
     # TODO: Fix reportUnusedVariable
     plugin: Plugin[GatewayBot, Any]  # pyright: ignore [reportUnusedVariable]
-    child: list[Includable[Any]]  # pyright: ignore [reportUnusedVariable]
-    return [
-      (child.metadata.app_command.name, child.metadata.app_command.name)
-      for plugin in plugin_manager.plugins.values()
-      for child in plugin._children  # pyright: ignore [reportPrivateUsage]
-    ]
+    for plugin_name, plugin in plugin_manager.plugins.items():
+        # TODO: Fix reportUnusedVariable
+        child: Includable[Any]  # pyright: ignore [reportUnusedVariable]
+        for child in plugin._children:  # pyright: ignore [reportPrivateUsage]
+            if isinstance(child.metadata, AppCommandMeta):
+                command_choices.append((child.metadata.app_command.name, child.metadata.app_command.name))
+            elif isinstance(child.metadata, EventMeta):
+                continue
+            else:
+                print(f'Found unknown metadata: {child.metadata} in {plugin_name}')
+
+    return command_choices
 
 
 def reload_plugin_manager() -> None:
