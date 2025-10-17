@@ -3,7 +3,6 @@
 import crescent
 import hikari
 import logging
-from crescent.ext import docstrings
 from PCBot.pluginmanager import (
     get_plugin_names, reload_handlers, reload_plugin_manager, reload_plugins
 )
@@ -25,12 +24,9 @@ plugin_folder = 'PCBot.plugins'
 
 
 @plugin.include
-@docstrings.parse_doc
-@crescent.command(name='reload')
+@crescent.command(name='reload', description='Reload the bot.')
 class ReloadCommand:
-    """
-    Reload the bot.
-
+    extra_description = """
     Requested by something sensible(somethingsensible).
     Implemented by something sensible(somethingsensible).
     """

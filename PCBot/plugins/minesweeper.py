@@ -16,7 +16,6 @@
 # Also see todos later in the file
 
 from crescent import command, Context, option, Plugin
-from crescent.ext import docstrings
 from dataclasses import dataclass
 from enum import Enum
 from hikari import (
@@ -601,12 +600,9 @@ class MinesweeperScreen(menu.Screen):
 game_screens: dict[MinesweeperGame, MinesweeperScreen] = {}
 
 @plugin.include
-@docstrings.parse_doc
-@command(name='minesweeper')
+@command(name='minesweeper', description='Play a game of Minesweeper.')
 class MinesweeperCommand:
-    """
-    Play a game of Minesweeper.
-
+    extra_description="""
     Requested by Cam(camtas).
     Implemented by Cam(camtas) & Joshua(somethingsensible).
     """

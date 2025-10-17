@@ -9,7 +9,6 @@ import os
 import socket
 import subprocess
 import sys
-from crescent.ext import docstrings
 from PCBot.botdata import (
     BotData, lavalink_password_path, get_token_file_path,
     ongaku_available
@@ -87,12 +86,9 @@ async def track_end_event(event: ongaku.TrackEndEvent):
 
 
 @plugin.include
-@docstrings.parse_doc
-@crescent.command(name='dectalk')
+@crescent.command(name='dectalk', description='Read out provided text in voice chat using dectalk.')
 class DecTalkCommand:
-    """
-    Read out provided text in voice chat using dectalk.
-
+    extra_description="""
     Requested by Kat(kopy_kat).
     Implemented by something sensible(somethingsensible).
     """

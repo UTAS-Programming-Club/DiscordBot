@@ -6,7 +6,6 @@
 
 from colorama import Back, Fore, Style
 from crescent import command, Context, option, Plugin
-from crescent.ext import docstrings
 from crescent.utils import create_task
 from dataclasses import dataclass
 from enum import Enum
@@ -725,12 +724,9 @@ game_screens: dict[CheckersGame, CheckersScreen] = {}
 
 
 @plugin.include
-@docstrings.parse_doc
-@command(name='checkers')
+@command(name='checkers', description='Play a game of Checkers.')
 class CheckersCommand:
     """
-    Play a game of Checkers.
-
     Requested by Lachlan McKay(emiko_namami) & Taylor(randomsploosh).
     Implemented by Joshua(somethingsensible) & Lachlan McKay(emiko_namami).
     """

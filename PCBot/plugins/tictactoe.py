@@ -4,7 +4,6 @@ import crescent
 import hikari
 import miru
 import re
-from crescent.ext import docstrings
 from enum import Enum
 from PCBot.botdata import BotData
 from typing import Optional
@@ -186,20 +185,15 @@ class TicTacToeButton(miru.Button):
 
 
 @plugin.include
-@docstrings.parse_doc
-@crescent.command(name='tictactoe', dm_enabled=False)
+@crescent.command(name='tictactoe', dm_enabled=False, description='Challenge a user to tic tac toe.')
 class TicTacToeCommand:
-    """
-    Challenge a user to tic tac toe.
-
+    extra_description="""
     Requested by something sensible(somethingsensible).
     Implemented by something sensible(somethingsensible).
-
-    Args:
-        user: User to challenge.
     """
 
-    user = crescent.option(hikari.User)
+    user = crescent.option(hikari.User, 'User to challenge.')
+    # TODO: Remove flag, experimental settings are already optional
     allow_experimental = crescent.option(
         bool, 'Allow the use of experimental settings',
         default=False

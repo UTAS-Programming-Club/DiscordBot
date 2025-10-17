@@ -6,7 +6,6 @@
 # TODO: Allow guessing entire words and end game either way
 
 from crescent import command, Context, option, Plugin
-from crescent.ext import docstrings
 from colorama import Fore, Style
 from hikari import GatewayBot, Message, Snowflake
 from linecache import getline
@@ -172,12 +171,9 @@ class HangmanGame(TextGuessGame):
 
 
 @plugin.include
-@docstrings.parse_doc
-@command(name='hangman')
+@command(name='hangman', description='Play a game of Hangman.')
 class HangmanCommand:
-    """
-    Play a game of Hangman.
-
+    extra_description="""
     Requested by Oliver(clippeh).
     Implemented by Joshua(somethingsensible).
     """

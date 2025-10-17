@@ -9,7 +9,6 @@
 #      ...
 
 from crescent import command, Context, option, Plugin
-from crescent.ext import docstrings
 from hikari import GatewayBot, Message, Snowflake
 from logging import getLogger, Logger
 from random import randrange
@@ -162,12 +161,9 @@ class MastermindGame(TextGuessGame):
 
 
 @plugin.include
-@docstrings.parse_doc
-@command(name='mastermind')
+@command(name='mastermind', description='Play a game of Mastermind.')
 class MastermindCommand:
-    """
-    Play a game of Mastermind.
-
+    extra_description="""
     Requested by Cam(camtas) & Joshua(somethingsensible).
     Implemented by Joshua(somethingsensible).
     """

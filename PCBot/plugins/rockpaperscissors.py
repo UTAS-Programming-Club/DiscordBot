@@ -3,7 +3,6 @@
 import crescent
 import hikari
 import miru
-from crescent.ext import docstrings
 from enum import Enum
 from PCBot.botdata import BotData
 from typing import Optional
@@ -146,21 +145,15 @@ class RPSView(miru.View):
 
 
 @plugin.include
-@docstrings.parse_doc
-@crescent.command(name='rpschallenge', dm_enabled=False)
+@crescent.command(name='rpschallenge', dm_enabled=False, description='Challenge a user to rock paper scissors.')
 class RPSChallengeCommand:
-    """
-    Challenge a user to rock paper scissors.
-
+    extra_description="""
     Requested by iluka wighton(razer304).
     Implemented by something sensible(somethingsensible) &
                    Camtas(camtas).
-
-    Args:
-        user: User to challenge.
     """
 
-    user = crescent.option(hikari.User)
+    user = crescent.option(hikari.User, 'User to challenge.')
 
     async def callback(self, ctx: crescent.Context) -> None:
         """Handle rpschallenge command being run by showing button view."""

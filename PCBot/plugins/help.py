@@ -3,7 +3,6 @@
 import crescent
 import hikari
 import inspect
-from crescent.ext import docstrings
 from PCBot.pluginmanager import get_plugin_info, get_command_choices
 
 # TODO: Add sorting to commands
@@ -27,12 +26,9 @@ async def command_autocomplete(
 
 
 @plugin.include
-@docstrings.parse_doc
-@crescent.command(name='help')
+@crescent.command(name='help', description='Provide infomation about available commands.')
 class HelpCommand:
-    """
-    Provide infomation about available commands.
-
+    extra_description="""
     Requested by something sensible(somethingsensible).
     Implemented by something sensible(somethingsensible).
     """
