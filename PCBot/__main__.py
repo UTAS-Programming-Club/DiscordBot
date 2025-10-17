@@ -42,7 +42,11 @@ bot = hikari.GatewayBot(
 miru_client = miru.Client(bot)
 
 if ongaku_available:
-    ongaku_client = ongaku.Client(bot, password=lavalink_password)
+    ongaku_client = ongaku.Client(bot)
+    ongaku_client.create_session(
+        name="pcbot-session",
+        password=lavalink_password
+    )
     model = BotData(miru_client, ongaku_client)
 else:
     model = BotData(miru_client)

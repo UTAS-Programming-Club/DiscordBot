@@ -20,6 +20,7 @@ github_api_headers = {
   'X-GitHub-Api-Version': '2022-11-28'
 }
 
+# TODO: Fix error from message being too long
 # TODO: Decide on commit['author']['date'] and commit['committer']['date']
 #       Can be different if cherrypicking, merging, rebasing, ...
 # TODO: Show committer as well
