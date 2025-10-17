@@ -145,7 +145,7 @@ class RPSView(miru.View):
 
 
 @plugin.include
-@crescent.command(name='rpschallenge', dm_enabled=False, description='Challenge a user to rock paper scissors.')
+@crescent.command(name='rpschallenge', context_types=(hikari.ApplicationContextType.GUILD,), description='Challenge a user to rock paper scissors.')
 class RPSChallengeCommand:
     extra_description="""
     Requested by iluka wighton(razer304).

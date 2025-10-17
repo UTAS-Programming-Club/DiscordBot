@@ -185,7 +185,7 @@ class TicTacToeButton(miru.Button):
 
 
 @plugin.include
-@crescent.command(name='tictactoe', dm_enabled=False, description='Challenge a user to tic tac toe.')
+@crescent.command(name='tictactoe', context_types=(hikari.ApplicationContextType.GUILD,), description='Challenge a user to tic tac toe.')
 class TicTacToeCommand:
     extra_description="""
     Requested by something sensible(somethingsensible).
