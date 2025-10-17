@@ -7,17 +7,6 @@ from hikari import ApplicationContextType, AutocompleteInteractionOption, Gatewa
 from hikari.events import CommandInteractionCreateEvent
 from hikari.interactions import CommandInteraction
 from logging import getLogger
-# from typing import Optional
-
-# TODO: Reload botdata.py, only if can be done without losing data
-# TODO: Restrict command to committee members
-# TODO: Indicate which commands are from each plugin
-# TODO: Indicate which plugins/commands are modified, modified or malformed
-# TODO: Specifically list which exceptions are possible during plugin loading
-# TODO: Change client status during reload?
-# TODO: Prevent unloading reload command if on disk version has an error
-# TODO: Report plugins that failed to load to whoever executed the command
-# TODO: Add backup for if reload.py and pluginmanager.py fail? Restart command?
 
 logger = getLogger(__name__)
 plugin = Plugin[GatewayBot, None]()
