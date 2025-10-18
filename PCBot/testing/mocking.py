@@ -81,7 +81,7 @@ class MockContext:
             print('#', end='')
         else:
             print(' ', end='')
-        print(f'{last_id}: {output}{Style.RESET}')
+        print(f'{last_id}: {output}{Style.RESET_ALL}')
         last_message_id = last_id
         return MockMessage(last_id)
 

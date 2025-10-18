@@ -5,6 +5,7 @@ from collections import Counter
 from crescent import Plugin, PluginManager
 from crescent.events import EventMeta
 from crescent.internal import AppCommandMeta, Includable
+from hashlib import blake2b
 from hikari import GatewayBot
 from importlib import import_module, reload
 from importlib.abc import ExecutionLoader, Loader
@@ -21,16 +22,21 @@ from typing import Any, Optional
 # TODO: Specifically list which exceptions are possible during plugin loading
 # TODO: Use same error reporting in reload_plugin_manager as reload_plugin
 # TODO: Fix the get_plugin_names() list being out of order while in safe mode
-# TODO: Make get_plugin_info return be dict[str, dict[str, AppCommandMeta, ...]]?
+# TODO: Make get_plugin_info return be dict[str, dict[str, tuple[AppCommandMeta, ...]]]?
 #       This would make parts of help much easier to implement
 
-logger: Logger = getLogger(__name__)
+logger: Logger
+plugin_hashes: dict[str, str]
+
+def init_pluginmanager():
+  global logger, plugin_hashes
+  logger = getLogger(__name__)
+  plugin_hashes = {}
 
 
-def get_plugin_names(plugin_manager: PluginManager) -> Counter[str]:
+def get_plugin_names() -> Counter[str]:
     """Provide a list of loaded plugins."""
-    return Counter(plugin_manager.plugins.keys())
-
+    return Counter(plugin_hashes.keys())
 
 # This is not a good method since it uses crescent's internal api but I could
 # not find another way to access command info without manually finding all
@@ -39,8 +45,8 @@ def get_plugin_info(plugin_manager: PluginManager)\
  -> dict[str, tuple[AppCommandMeta, ...]]:
     """Provide a list of loaded plugins along with their commands."""
     loaded_commands: dict[str, tuple[AppCommandMeta, ...]] = {}
-    plugin_name: str
     # TODO: Fix reportUnusedVariable
+    plugin_name: str  # pyright: ignore [reportUnusedVariable]
     plugin: Plugin[GatewayBot, Any]  # pyright: ignore [reportUnusedVariable]
     for plugin_name, plugin in plugin_manager.plugins.items():
         # TODO: Fix reportUnusedVariable
@@ -56,26 +62,12 @@ def get_plugin_info(plugin_manager: PluginManager)\
         loaded_commands[plugin_name] = tuple(plugin_loaded_commands)
     return loaded_commands
 
-
-# TODO: Fix, only used in __main__ where plugin_info.items() is []
-# def print_plugin_info(plugin_info: dict[str, tuple[AppCommand]]) -> None:
-#     """Print the name of each plugin along with their commands."""
-#     plugin_name: str
-#     commands: tuple[AppCommand]
-#     for plugin_name, commands in plugin_info.items():
-#         print(plugin_name)
-#         command: AppCommand
-#         for command in commands:
-#             app_command = command.app_command
-#             print(f'    {app_command.name}: {app_command.description}')
-
-
-# I planned to implement this using get_plugin_info but decided this was easier
 def get_command_choices(plugin_manager: PluginManager)\
   -> list[tuple[str, str]]:
     """Provide a listed of loaded commands as crescent autocomplete tuples."""
     command_choices: list[tuple[str, str]] = []
     # TODO: Fix reportUnusedVariable
+    plugin_name: str  # pyright: ignore [reportUnusedVariable]
     plugin: Plugin[GatewayBot, Any]  # pyright: ignore [reportUnusedVariable]
     for plugin_name, plugin in plugin_manager.plugins.items():
         # TODO: Fix reportUnusedVariable
@@ -90,12 +82,19 @@ def get_command_choices(plugin_manager: PluginManager)\
 
     return command_choices
 
+# From https://stackoverflow.com/a/59056837
+def get_plugin_hash(file_path: str) -> str:
+    with open(file_path, "rb") as f:
+        file_hash = blake2b()
+        while chunk := f.read(8192):
+            file_hash.update(chunk)
+    return file_hash.hexdigest()
+
 
 def reload_plugin_manager() -> None:
     """Reload this module."""
     module: ModuleType = import_module(__name__)
     reload(module)
-
 
 def reload_handlers(plugin_manager: PluginManager):
     """Reload plugins that provide functionally to other plugins."""
@@ -105,19 +104,27 @@ def reload_handlers(plugin_manager: PluginManager):
     reply_handler: ModuleType = import_module('PCBot.plugins.replyhandler')
     reply_handler.reset_reply_handler()
 
-
 def reload_plugin(
-  plugin_manager: PluginManager, path: str, strict: bool = True
+  plugin_manager: PluginManager, file_path: str, module_path: str, strict: bool = True
 ) -> None:
     """Reload a single plugin with error reporting but no exceptions."""
     try:
-        plugin_manager.load(path, strict=strict)
-        plugin_manager.load(path, refresh=True, strict=strict)
+        plugin_hash: str = get_plugin_hash(file_path)
+        if module_path in plugin_hashes and plugin_hashes[module_path] == plugin_hash:
+            return
+
+        plugin_hashes.pop(module_path, None)
+        if module_path in plugin_manager.plugins:
+            plugin_manager.unload(module_path)
+
+        plugin_manager.load(module_path, strict=strict)
+        plugin_manager.load(module_path, refresh=True, strict=strict)
+        plugin_hashes[module_path] = plugin_hash
     except:
-        logger.error(f'The following error occurred while loading {path}:')
+        logger.error(f'The following error occurred while loading {module_path}:')
         # From https://stackoverflow.com/a/45771867
         # Try to find first trace line within erroring plugin
-        spec: Optional[ModuleSpec] = find_spec(path)
+        spec: Optional[ModuleSpec] = find_spec(module_path)
         if spec is None:
             # If failed to find plugin then just print entire traceback
             print(format_exc())
@@ -162,11 +169,7 @@ async def reload_plugins(
     """Load new plugins, reloads existing ones and unload old ones."""
     pathlib_path = Path(*path.split("."))
 
-    # Used to avoid the a load erroring because it tried to load
-    # an already loaded plugin
-    plugin_manager.unload_all()
-
     glob_path: Path
     for glob_path in sorted(pathlib_path.glob(r'**/[!_]*.py')):
         plugin_path: str = ".".join(glob_path.as_posix()[:-3].split("/"))
-        reload_plugin(plugin_manager, plugin_path)
+        reload_plugin(plugin_manager, glob_path, plugin_path)

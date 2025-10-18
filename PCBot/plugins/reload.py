@@ -66,7 +66,7 @@ class ReloadCommand:
         await ctx.respond('Reloading...', ephemeral=True)
 
         plugins = plugin.client.plugins
-        old_plugins = get_plugin_names(plugins)
+        old_plugins = get_plugin_names()
 
         try:
             reload_plugin_manager()
@@ -99,7 +99,7 @@ class ReloadCommand:
             logger.info(reloaded_text)
             await ctx.edit(reloaded_text)
 
-        new_plugins = get_plugin_names(plugins)
+        new_plugins = get_plugin_names()
         loaded_list = ', '.join(new_plugins)
         missing_list = ', '.join(old_plugins - new_plugins)
         new_list = ', '.join(new_plugins - old_plugins)
