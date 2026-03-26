@@ -23,6 +23,8 @@ leaderboard_refresh_interval = 1800  # 30 minutes
 logger = getLogger(__name__)
 plugin = crescent.Plugin[GatewayBot, BotData]()
 
+year = 2025
+
 # Load aoc cookie
 with open(get_token_file_path(aoc_cookie_path)) as file:
     session_cookie = file.read().strip()
@@ -47,7 +49,7 @@ async def fetch_leaderboard(ctx: crescent.Context | None = None) -> None:
             await ctx.defer()
 
         leaderboard_url = \
-          "https://adventofcode.com/2024/leaderboard/private/view/2494838.json"
+          f"https://adventofcode.com/{year}/leaderboard/private/view/2494838.json"
         headers = {'Cookie': session_cookie}
         request = get(leaderboard_url, headers=headers)
 
@@ -117,10 +119,10 @@ async def update_leaderboard() -> None:
     await update_names()
 
 @plugin.include
-@crescent.command(name="aoc", description="Fetch 2024 AOC leaderboard.")
+@crescent.command(name="aoc", description=f"Fetch {year} AOC leaderboard.")
 class AOCCommand:
     """
-    Display cached 2024 AOC leaderboard.
+    Display cached AOC leaderboard for chosen year.
 
     Requested by Ian Lewis(giant_ian) & Lindsay Wells(giantlindsay).
     Implemented by something sensible(somethingsensible).
@@ -177,7 +179,6 @@ class AOCCommand:
           for player in leaderboard["members"].values()
           if player['stars'] != 0
         ]
-
         # Sort by name, alphabetically
         user_data.sort(key=itemgetter(0))
 
@@ -229,8 +230,8 @@ class AOCCommand:
         scores = ""
         languages = ""
 
-        max_score_len = max(len(str(user[1])) for user in user_data)
-        max_stars_len = max(len(str(user[2])) for user in user_data)
+        max_score_len = max(len(str(user[1])) for user in user_data) if len(user_data) > 0 else 0
+        max_stars_len = max(len(str(user[2])) for user in user_data) if len(user_data) > 0 else 0
 
         for user in user_data:
             username = user[4] if user[4] != "" else user[0]
@@ -261,6 +262,8 @@ class AOCCommand:
 
     async def callback(self, ctx: crescent.Context) -> None:
         """Handle aoc command being run by showing the leaderboard."""
+        await ctx.defer()
+
         await fetch_leaderboard(ctx)
 
         score_type = ScoreType[self.score_type]
