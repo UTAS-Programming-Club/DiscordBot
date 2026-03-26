@@ -82,9 +82,10 @@ def get_command_choices(plugin_manager: PluginManager)\
 
     return command_choices
 
+
 # From https://stackoverflow.com/a/59056837
 def get_plugin_hash(file_path: str) -> str:
-    with open(file_path, "rb") as f:
+    with open(file_path, 'rb') as f:
         file_hash = blake2b()
         while chunk := f.read(8192):
             file_hash.update(chunk)
@@ -95,14 +96,6 @@ def reload_plugin_manager() -> None:
     """Reload this module."""
     module: ModuleType = import_module(__name__)
     reload(module)
-
-def reload_handlers(plugin_manager: PluginManager):
-    """Reload plugins that provide functionally to other plugins."""
-    if 'PCBot.plugins.replyhandler' not in plugin_manager.plugins.keys():
-        return
-
-    reply_handler: ModuleType = import_module('PCBot.plugins.replyhandler')
-    reply_handler.reset_reply_handler()
 
 def reload_plugin(
   plugin_manager: PluginManager, file_path: str, module_path: str, strict: bool = True
@@ -163,13 +156,24 @@ def reload_plugin(
 # Afaik I can use this despite an incompatable licence with mpl provided this
 # fuction(file?) remains under mpl since it is "Covered Software" by 3.3 and
 # then mention Exhibit B
-async def reload_plugins(
-    plugin_manager: PluginManager, path: str, strict: bool = True
-) -> None:
+def reload_plugins(plugin_manager: PluginManager, path: str) -> None:
     """Load new plugins, reloads existing ones and unload old ones."""
-    pathlib_path = Path(*path.split("."))
+    pathlib_path = Path(*path.split('.'))
 
     glob_path: Path
     for glob_path in sorted(pathlib_path.glob(r'**/[!_]*.py')):
-        plugin_path: str = ".".join(glob_path.as_posix()[:-3].split("/"))
-        reload_plugin(plugin_manager, glob_path, plugin_path)
+        plugin_module: str = '.'.join(glob_path.as_posix()[:-3].split('/'))
+        reload_plugin(plugin_manager, glob_path, plugin_module)
+
+
+def reload_handlers(plugin_manager: PluginManager) -> None:
+    """Reload plugins that provide functionally to other plugins."""
+    reply_handler_path = 'PCBot/core/replyhandler.py'
+    reply_handler_module: str = '.'.join(reply_handler_path[:-3].split('/'))
+    reload_plugin(plugin_manager, reply_handler_path, reply_handler_module)
+
+    if reply_handler_module not in plugin_manager.plugins.keys():
+        return
+
+    reply_handler: ModuleType = import_module(reply_handler_module)
+    reply_handler.reset_reply_handler()

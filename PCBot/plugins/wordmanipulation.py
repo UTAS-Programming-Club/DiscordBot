@@ -10,7 +10,7 @@ from logging import getLogger, Logger
 from random import choice, sample
 from string import ascii_lowercase
 from typing import Optional
-from PCBot.plugins.replyhandler import (
+from PCBot.core.replyhandler import (
   GuessOutcome, remove_game, send_text_message, TextGuessGame
 )
 

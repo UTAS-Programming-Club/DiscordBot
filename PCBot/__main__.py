@@ -10,7 +10,7 @@ from PCBot.botdata import (
     BotData, token_path, lavalink_password_path,
     guild_id_path, get_token_file_path, ongaku_available
 )
-from PCBot.pluginmanager import init_pluginmanager, reload_plugins
+from PCBot.core.pluginmanager import init_pluginmanager, reload_handlers, reload_plugins
 # from PCBot.testing.mocking import make_guild_member, mock_command
 # from PCBot.testing.hikari.test_users_comparision import (
 #   make_interactions_member
@@ -56,7 +56,8 @@ crescent_client = crescent.Client(bot, model, default_guild=guild_id)
 async def load_plugins():
     """Load working plugins while ignoring others."""
     try:
-        await reload_plugins(crescent_client.plugins, 'PCBot.plugins')
+        reload_handlers(crescent_client.plugins)
+        reload_plugins(crescent_client.plugins, 'PCBot.plugins')
     finally:
         await crescent_client.commands.register_commands()
 

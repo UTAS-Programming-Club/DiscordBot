@@ -3,7 +3,7 @@
 import crescent
 import hikari
 import inspect
-from PCBot.pluginmanager import get_command_choices, get_plugin_info
+from PCBot.core.pluginmanager import get_command_choices, get_plugin_info
 
 # TODO: Add sorting to commands
 # TODO: Add backup for missing args section in docstring(if even present)

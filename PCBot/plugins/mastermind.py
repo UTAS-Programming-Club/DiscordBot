@@ -13,7 +13,7 @@ from hikari import GatewayBot, Message, Snowflake
 from logging import getLogger, Logger
 from random import randrange
 from typing import Optional
-from PCBot.plugins.replyhandler import (
+from PCBot.core.replyhandler import (
   GuessOutcome, remove_game, send_text_message, TextGuessGame
 )
 

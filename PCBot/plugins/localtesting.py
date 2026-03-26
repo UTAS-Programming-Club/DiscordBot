@@ -1,6 +1,6 @@
 """This module contains the bot's plugin local testing command."""
 
-from PCBot.pluginmanager import get_command_choices, get_plugin_info
+from PCBot.core.pluginmanager import get_command_choices, get_plugin_info
 from crescent import AutocompleteContext, command, Context, option, Plugin
 from crescent.internal import handle_resp
 from hikari import ApplicationContextType, AutocompleteInteractionOption, GatewayBot

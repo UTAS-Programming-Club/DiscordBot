@@ -12,7 +12,6 @@ from hikari import (
 )
 from typing import Optional
 
-# TODO: Is this needed?
 plugin = Plugin[GatewayBot, None]()
 
 

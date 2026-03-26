@@ -29,7 +29,7 @@ from random import randrange
 from re import Match, IGNORECASE, search
 from typing import Awaitable, Callable, Optional
 from PCBot.botdata import BotData
-from PCBot.plugins.replyhandler import (
+from PCBot.core.replyhandler import (
   add_game, get_interaction_channel, GuessOutcome, remove_game, TextGuessGame
 )
 

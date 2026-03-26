@@ -5,7 +5,7 @@ import crescent
 import hikari
 import inspect
 from colorama import Style
-from PCBot.pluginmanager import get_plugin_info
+from PCBot.core.pluginmanager import get_plugin_info
 from PCBot.testing.hikari.test_users_comparision import (
   make_interactions_member, make_user
 )
