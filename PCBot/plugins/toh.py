@@ -66,7 +66,7 @@ class HanoiGame(TextGuessGame):
         if source_stack == dest_stack:
           logger.info('Source and dest stacks match')
           return GuessOutcome.Invalid
-        if source_disk >= disk_count or dest_stack >= disk_count:
+        if source_stack >= disk_count or dest_stack >= disk_count:
           logger.info('Source or dest stack too high')
           return GuessOutcome.Invalid
 
@@ -108,7 +108,7 @@ class HanoiGame(TextGuessGame):
         status += ' '
         for stack in range(stack_count):
           value: int = self.grid[stack][disk] if disk >= 0 else 0
-          char: str = '|' if value == 0 else value
+          char: str = '|' if value == 0 else str(value)
           status += f'{char} '
         status += '\n'
 
