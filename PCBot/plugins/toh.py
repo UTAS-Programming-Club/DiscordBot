@@ -55,7 +55,6 @@ class HanoiGame(TextGuessGame):
                     value += 1
                 else:
                     break
-            logger.info(f'Test: {value}')
             if value == disk_count:
                 return True
         return False
@@ -72,7 +71,7 @@ class HanoiGame(TextGuessGame):
         if source_stack == dest_stack:
             logger.info('Source and dest stacks match')
             return GuessOutcome.Invalid
-        if source_stack >= disk_count or dest_stack >= disk_count:
+        if source_stack >= stack_count or dest_stack >= stack_count:
             logger.info('Source or dest stack too high')
             return GuessOutcome.Invalid
 
