@@ -2,7 +2,6 @@
 # pyright: strict
 
 from crescent import AutocompleteContext, command, Context, option, Plugin
-from crescent.ext import docstrings
 from enum import Enum
 from hikari import (
   AutocompleteInteractionOption, GatewayBot, Message, Snowflake
@@ -11,7 +10,7 @@ from logging import getLogger, Logger
 from random import choice, sample
 from string import ascii_lowercase
 from typing import Optional
-from PCBot.plugins.replyhandler import (
+from PCBot.core.replyhandler import (
   GuessOutcome, remove_game, send_text_message, TextGuessGame
 )
 
@@ -169,12 +168,9 @@ class WordManipulationGame(TextGuessGame):
 
 
 @plugin.include
-@docstrings.parse_doc
-@command(name='words')
+@command(name='words', description='Play a word manipulation minigame.')
 class WordManipulationCommand:
-    """
-    Play a word manipulation minigame.
-
+    extra_description="""
     Requested by Cam(camtas) & Joshua(somethingsensible).
     Implemented by Joshua(somethingsensible).
     """

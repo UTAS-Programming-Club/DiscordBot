@@ -3,8 +3,7 @@
 import crescent
 import hikari
 import inspect
-from crescent.ext import docstrings
-from PCBot.pluginmanager import get_plugin_info, get_command_choices
+from PCBot.core.pluginmanager import get_command_choices, get_plugin_info
 
 # TODO: Add sorting to commands
 # TODO: Add backup for missing args section in docstring(if even present)
@@ -27,12 +26,9 @@ async def command_autocomplete(
 
 
 @plugin.include
-@docstrings.parse_doc
-@crescent.command(name='help')
+@crescent.command(name='help', description='Provide infomation about available commands.')
 class HelpCommand:
-    """
-    Provide infomation about available commands.
-
+    extra_description="""
     Requested by something sensible(somethingsensible).
     Implemented by something sensible(somethingsensible).
     """
@@ -68,10 +64,10 @@ class HelpCommand:
 
     async def command_help(self, ctx: crescent.Context) -> None:
         """Show detailed info for a single command."""
-        plugin_info = get_plugin_info(plugin.client.plugins)
+        plugin_info: dict[str, tuple[AppCommandMeta, ...]] = get_plugin_info(plugin.client.plugins)
         output = f'```PCBot help:\n\n{self.command} command info:\n'
 
-        command_info = {
+        command_info: dict[str, AppCommandMeta] = {
           command.app_command.name: command
           for plugin_name in plugin_info
           for command in plugin_info[plugin_name]
@@ -82,7 +78,7 @@ class HelpCommand:
                               ephemeral=True)
             return
 
-        command = command_info[self.command]
+        command: AppCommandMeta = command_info[self.command]
         output = (f'{output}This command is a part of '
                   f'{command.owner.__module__}.\n')
 

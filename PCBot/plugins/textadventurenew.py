@@ -74,11 +74,9 @@ async def on_game_message_create(event: MessageCreateEvent) -> None:
     await handle_input(game_message, input_index)
 
 @plugin.include
-@crescent.command(name='text2')
+@crescent.command(name='text2', description='Start the PC\'s updated untitled text adventure.')
 class TextCommand:
-    """
-    Start the PC's updated untitled text adventure.
-
+    extra_description="""
     Requested by something sensible(somethingsensible).
     Implemented by something sensible(somethingsensible).
     """

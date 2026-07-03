@@ -3,8 +3,7 @@
 import crescent
 import hikari
 import logging
-from crescent.ext import docstrings
-from PCBot.pluginmanager import (
+from PCBot.core.pluginmanager import (
     get_plugin_names, reload_handlers, reload_plugin_manager, reload_plugins
 )
 from typing import Optional
@@ -25,12 +24,9 @@ plugin_folder = 'PCBot.plugins'
 
 
 @plugin.include
-@docstrings.parse_doc
-@crescent.command(name='reload')
+@crescent.command(name='reload', description='Reload the bot.')
 class ReloadCommand:
-    """
-    Reload the bot.
-
+    extra_description = """
     Requested by something sensible(somethingsensible).
     Implemented by something sensible(somethingsensible).
     """
@@ -70,12 +66,12 @@ class ReloadCommand:
         await ctx.respond('Reloading...', ephemeral=True)
 
         plugins = plugin.client.plugins
-        old_plugins = get_plugin_names(plugins)
+        old_plugins = get_plugin_names()
 
         try:
             reload_plugin_manager()
             reload_handlers(plugins)
-            await reload_plugins(plugins, plugin_folder)
+            reload_plugins(plugins, plugin_folder)
             safe_mode = False
         except:
             logger.exception('An error occurred while reloading plugins:')
@@ -103,7 +99,7 @@ class ReloadCommand:
             logger.info(reloaded_text)
             await ctx.edit(reloaded_text)
 
-        new_plugins = get_plugin_names(plugins)
+        new_plugins = get_plugin_names()
         loaded_list = ', '.join(new_plugins)
         missing_list = ', '.join(old_plugins - new_plugins)
         new_list = ', '.join(new_plugins - old_plugins)

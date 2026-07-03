@@ -1,11 +1,11 @@
-hikari == 2.0.0.dev122
-hikari-crescent == 0.6.6
-crescent-ext-docstrings == 0.2.2
-hikari-miru == 4.1.1
-hikari-ongaku == 0.5.1
+hikari == 2.3.3
+hikari-crescent == 1.3.0
+hikari-miru == 4.2.0
+hikari-ongaku @ git+https://github.com/hikari-ongaku/ongaku@fa5fb796d20bb61f88ae30c1ea17ceaa97cf6363
 requests == 2.33.0
-jwt == 1.3.1
+jwt == 1.4.0
 colorama == 0.4.6
-cffi == 1.16.0
+cffi == 1.17.1
 tabulate == 0.9.0
-abcattrs == 0.5.0
+abcattrs == 0.6.1
+aiohttp ~= 3.11.0 # Fix issue with hikari-ongaku

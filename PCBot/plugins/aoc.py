@@ -179,7 +179,6 @@ class AOCCommand:
           for player in leaderboard["members"].values()
           if player['stars'] != 0
         ]
-
         # Sort by name, alphabetically
         user_data.sort(key=itemgetter(0))
 

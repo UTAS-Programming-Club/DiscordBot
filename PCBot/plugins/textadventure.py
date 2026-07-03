@@ -4,7 +4,6 @@ import crescent
 import hikari
 import os.path
 from cffi import FFI
-from crescent.ext import docstrings
 from enum import Enum
 from typing import Any, Optional
 
@@ -233,12 +232,9 @@ async def on_game_message_create(event: hikari.MessageCreateEvent):
 
 
 @plugin.include
-@docstrings.parse_doc
-@crescent.command(name='text')
+@crescent.command(name='text', description='Start the PC\'s untitled text adventure.')
 class TextCommand:
-    """
-    Start the PC's untitled text adventure.
-
+    extra_description="""
     Requested by something sensible(somethingsensible).
     Implemented by something sensible(somethingsensible).
     """

@@ -6,7 +6,6 @@
 # TODO: Allow guessing entire words and end game either way
 
 from crescent import command, Context, option, Plugin
-from crescent.ext import docstrings
 from colorama import Fore, Style
 from hikari import GatewayBot, Message, Snowflake
 from linecache import getline
@@ -14,7 +13,7 @@ from logging import getLogger, Logger
 from random import randrange
 from string import ascii_lowercase
 from typing import Optional
-from PCBot.plugins.replyhandler import (
+from PCBot.core.replyhandler import (
   GuessOutcome, remove_game, send_text_message, TextGuessGame
 )
 
@@ -172,12 +171,9 @@ class HangmanGame(TextGuessGame):
 
 
 @plugin.include
-@docstrings.parse_doc
-@command(name='hangman')
+@command(name='hangman', description='Play a game of Hangman.')
 class HangmanCommand:
-    """
-    Play a game of Hangman.
-
+    extra_description="""
     Requested by Oliver(clippeh).
     Implemented by Joshua(somethingsensible).
     """

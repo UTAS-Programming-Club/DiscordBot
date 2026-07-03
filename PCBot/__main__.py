@@ -10,7 +10,7 @@ from PCBot.botdata import (
     BotData, token_path, lavalink_password_path,
     guild_id_path, get_token_file_path, ongaku_available
 )
-from PCBot.pluginmanager import reload_plugins
+from PCBot.core.pluginmanager import init_pluginmanager, reload_handlers, reload_plugins
 # from PCBot.testing.mocking import make_guild_member, mock_command
 # from PCBot.testing.hikari.test_users_comparision import (
 #   make_interactions_member
@@ -42,7 +42,11 @@ bot = hikari.GatewayBot(
 miru_client = miru.Client(bot)
 
 if ongaku_available:
-    ongaku_client = ongaku.Client(bot, password=lavalink_password)
+    ongaku_client = ongaku.Client(bot)
+    ongaku_client.create_session(
+        name="pcbot-session",
+        password=lavalink_password
+    )
     model = BotData(miru_client, ongaku_client)
 else:
     model = BotData(miru_client)
@@ -52,20 +56,20 @@ crescent_client = crescent.Client(bot, model, default_guild=guild_id)
 async def load_plugins():
     """Load working plugins while ignoring others."""
     try:
-        await reload_plugins(crescent_client.plugins, 'PCBot.plugins')
+        reload_handlers(crescent_client.plugins)
+        reload_plugins(crescent_client.plugins, 'PCBot.plugins')
     finally:
         await crescent_client.commands.register_commands()
 
 
 # Load plugins
+init_pluginmanager()
+
 # For mocking
 # crescent_client.plugins.load_folder('PCBot.plugins')
 # For running the bot
 crescent_client._run_future(load_plugins())
 
-# TODO: Fix
-# plugin_info = get_plugin_info(crescent_client.plugins)
-# print_plugin_info(plugin_info)
 
 # Run the bot
 if __name__ == '__main__':

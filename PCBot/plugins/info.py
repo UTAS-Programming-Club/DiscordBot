@@ -5,7 +5,6 @@ import hikari
 import json
 import requests
 import time
-from crescent.ext import docstrings
 from jwt import JWT, jwk_from_pem
 from pathlib import Path
 from PCBot.botdata import gh_pem_path
@@ -21,6 +20,7 @@ github_api_headers = {
   'X-GitHub-Api-Version': '2022-11-28'
 }
 
+# TODO: Fix error from message being too long
 # TODO: Decide on commit['author']['date'] and commit['committer']['date']
 #       Can be different if cherrypicking, merging, rebasing, ...
 # TODO: Show committer as well
@@ -110,12 +110,9 @@ def gh_get_fork_events(s: requests.Session, url: str) -> dict:
 
 
 @plugin.include
-@docstrings.parse_doc
-@crescent.command(name='info')
+@crescent.command(name='info', description='Provide infomation about about the bot.')
 class InfoCommand:
-    """
-    Provide infomation about about the bot.
-
+    extra_description="""
     Requested by something sensible(somethingsensible).
     Implemented by something sensible(somethingsensible).
     """
@@ -149,7 +146,7 @@ class InfoCommand:
             output += (f"\n[{fork['name']}](<{fork['html_url']}>) by"
                        f" [{fork['owner']['login']}]"
                        f"(<{fork['owner']['html_url']}>)\n")
-            last_push = next((event for event in events 
+            last_push = next((event for event in events
                               if event['type'] == 'PushEvent'),
                              None)
             if last_push is None or len(last_push['payload']['commits']) == 0:
@@ -163,5 +160,5 @@ class InfoCommand:
                        f"(<{last_commit_info['html_url']}>)\n")
             full_message = last_commit_info['commit']['message']
             output += '\t\t' + full_message.split('\n')[0] + '\n'
-        
+
         await ctx.respond(output)

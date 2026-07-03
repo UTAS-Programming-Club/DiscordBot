@@ -1,7 +1,8 @@
 # Install Packages
+Tested with Python 3.10, 3.11 and 3.12
 ```sh
-pip install -r requirements-3.10.txt # For python 3.10
-pip install -r requirements-3.11.txt # For python 3.11, required for dectalk plugin
+pip install -r requirements-3.10.txt # For python 3.10 or newer
+pip install -r requirements-3.11.txt # For python 3.11 or newer, required for dectalk plugin
 ```
 
 # Setup
@@ -26,9 +27,9 @@ PC club members are welcome to contribute and there is a section in each docstri
 * Type checking
 * PEP8 AND PEP257 checking, https://www.codewof.co.nz/style/python3/ works until that happens though
 * Combine previous with formatter, yapf, black?
-* Show full command docstrings somewhere, help command? Then have non pinging mentions for required and implemented by lines
+* Show full command descriptions somewhere, help command? Then have non pinging mentions for required and implemented by lines
 * Log all run commands with the requester's name in the console
-* Make sure all command docstrings have requested by, implemented by and arguments sections for help command
+* Make sure all command descriptions have requested by, implemented by and arguments sections for help command
 * More commands
 * Support for more python versions than just 3.10 and 3.11
 * Make guild id optional

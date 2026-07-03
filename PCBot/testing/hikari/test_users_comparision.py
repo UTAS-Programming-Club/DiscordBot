@@ -28,6 +28,7 @@ def make_user(app, user_id, username):
           discriminator="0001",
           username=username,
           global_name=None,
+          avatar_decoration=None,
           avatar_hash=None,
           banner_hash=None,
           accent_color=None,
