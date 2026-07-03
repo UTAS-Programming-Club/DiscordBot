@@ -111,7 +111,7 @@ async def autocomplete_score_type(
     return [(st.name, st.name) for st in ScoreType]
 
 
-```
+'''
 @plugin.include
 @tasks.loop(hours=0, minutes=30, seconds=0)
 async def update_leaderboard() -> None:
@@ -288,4 +288,4 @@ class AOCCommand:
         await ctx.respond(output, embed=embed, user_mentions=False)
 
         await update_names()
-```
+'''
